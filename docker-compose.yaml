@@ -1,0 +1,50 @@
+services:
+  timescale:
+    image: timescale/timescaledb-ha:pg14-latest
+    ports:
+      - 5432:5432 # HTTP UI and API port
+    volumes:
+      - timescale:/home/postgres/pgdata/data
+      - ./superset.sql:/docker-entrypoint-initdb.d/superset.sql
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=adminpass
+      - POSTGRES_DB=huawei-solar
+      - TIMESCALEDB_TELEMETRY=off
+
+  superset:
+    init: true
+    build: 
+      context: ./Superset
+      args:
+        - DATABASE_DISPLAY_NAME=Huawei Solar
+        - DATABASE_DB=huawei-solar
+        - DATABASE_HOST=192.168.0.164
+        - DATABASE_USER=superset
+        - DATABASE_PASSWORD=superset
+        - DATABASE_PORT=5432
+        - DATABASE_DIALECT=postgresql
+    restart: unless-stopped
+    ports:
+      - 80:8088
+    volumes:
+      - superset:/app/superset_home
+    depends_on:
+      - timescale
+
+  collector:
+    build: ./Collector
+    restart: unless-stopped
+    environment:
+      - DB_USER=admin
+      - DB_PASS=adminpass
+      - DB_NAME=huawei-solar
+      - DB_HOST=timescale
+    volumes:
+      - ./Collector/resources/config.yaml:/usr/src/collector/resources/config.yaml
+    depends_on:
+      - timescale
+volumes:
+  timescale:
+  redis:
+  superset:
