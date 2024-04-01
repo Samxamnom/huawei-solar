@@ -272,32 +272,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         MAXIMUM_REACTIVE_POWER_TO_GRID,
         MAXIMUM_APPARENT_POWER_FROM_GRID,
     ];
-    let info_vals = inverter.read_batch_raw(&info_regs)?;
+    let info_vals = inverter.read_batch(&info_regs)?;
 
     println!("Inverter");
     println!(
         "\tModel: {} (ID: {})",
-        String::convert(&info_vals[0]).unwrap(),
-        u16::convert(&info_vals[3]).unwrap()
+        &info_vals[0].val,
+        &info_vals[3].val
     );
     println!(
         "\tSN/PN: {}/{}",
-        String::convert(&info_vals[1]).unwrap(),
-        String::convert(&info_vals[2]).unwrap()
+        &info_vals[1].val,
+        &info_vals[2].val
     );
-    println!(
-        "\tStrings: {}",
-        u16::convert(&info_vals[4]).unwrap(),
-    );
-    println!(
-        "\tTrackers: {}",
-        u16::convert(&info_vals[5]).unwrap(),
-    );
+    println!("\tStrings: {}", &info_vals[4].val,);
+    println!("\tTrackers: {}", &info_vals[5].val,);
+    println!("\tMaximum:");
+    println!("\t\tactive power  : {}", &info_vals[7].to_float().unwrap());
+    println!("\t\tapparent power: {}", &info_vals[8].to_float().unwrap());
+    println!("\t\treactive power -> grid: {}", &info_vals[9].to_float().unwrap());
+    println!("\t\tapparent power <- grid: {}", &info_vals[10].to_float().unwrap());
 
-
-    for _ in 0..10 {
+    for _ in 0..5 {
         let now = Instant::now();
-        let active_pow = inverter.read(ACTIVE_POWER)?;
+        let active_pow = inverter.read_raw(ACTIVE_POWER)?;
         let time = now.elapsed();
         println!("active power {:?} time {:?}", active_pow, time);
 
@@ -314,13 +312,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             PV4_VOLTAGE,
             PV4_CURRENT,
         ];
-        let active_pow = inverter
-            .read_batch(regs)?
-            .into_iter()
-            .zip(regs)
-            .for_each(|(val, reg)| {
-                println!("{:?}: {:?}", reg.name, val);
-            });
+        let active_pow = inverter.read_batch(regs)?.into_iter().for_each(|val| {
+            println!("{:?}: {:?}", val.reg.name, val.val);
+        });
         let time = now.elapsed();
         println!("batch {:?} time {:?}", active_pow, time);
 
