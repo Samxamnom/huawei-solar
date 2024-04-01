@@ -274,11 +274,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     let info_vals = inverter.read_batch_raw(&info_regs)?;
 
-    println!("Inverter {}", String::convert(&info_vals[0]).unwrap());
+    println!("Inverter");
     println!(
         "\tModel: {} (ID: {})",
         String::convert(&info_vals[0]).unwrap(),
-        String::convert(&info_vals[3]).unwrap()
+        u16::convert(&info_vals[3]).unwrap()
     );
     println!(
         "\tSN/PN: {}/{}",
@@ -287,11 +287,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!(
         "\tStrings: {}",
-        String::convert(&info_vals[4]).unwrap(),
+        u16::convert(&info_vals[4]).unwrap(),
     );
     println!(
         "\tTrackers: {}",
-        String::convert(&info_vals[5]).unwrap(),
+        u16::convert(&info_vals[5]).unwrap(),
     );
 
 
