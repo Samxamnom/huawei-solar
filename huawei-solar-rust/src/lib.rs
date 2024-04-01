@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use modbus::Transport;
+
 // use registers::RegisterType;
 
 pub mod registers {
@@ -181,7 +183,7 @@ pub mod registers {
 // port: 6607
 
 enum Client {
-    TCP(Box<dyn modbus::Client>),
+    TCP(Transport),
 }
 pub struct Inverter {
     client: Client,
@@ -273,7 +275,7 @@ impl Inverter {
             },
         )?;
         Ok(Inverter {
-            client: Client::TCP(Box::new(mb_client)),
+            client: Client::TCP(mb_client),
         })
     }
 
@@ -287,35 +289,52 @@ impl Inverter {
     // }
     pub fn read(&mut self, reg: registers::Register) -> Result<Vec<u16>, Error> {
         let value = match self.client {
-            Client::TCP(ref mut tcp_client) => {
-                tcp_client.read_holding_registers(reg.address, reg.quantity.into())?
-            }
+            Client::TCP(ref mut tcp_client) => modbus::Client::read_holding_registers(
+                tcp_client,
+                reg.address,
+                reg.quantity.into(),
+            )?,
         };
         Ok(value)
     }
 
-    pub fn read_batch(&mut self, regs: &[registers::Register]) -> Result<Vec<Vec<u16>>, modbus::Error> {
+    pub fn read_batch(
+        &mut self,
+        regs: &[registers::Register],
+    ) -> Result<Vec<Vec<u16>>, modbus::Error> {
         if regs.is_empty() {
             return Ok(Vec::new());
         }
         let min = regs.iter().map(|r| r.address).min().unwrap();
         // actually highest read address +1
-        let max = regs.iter().map(|r| r.address + r.quantity as u16).min().unwrap();
+        let max = regs
+            .iter()
+            .map(|r| r.address + r.quantity as u16)
+            .min()
+            .unwrap();
 
         let values = match self.client {
             Client::TCP(ref mut tcp_client) => {
-                tcp_client.read_holding_registers(min, max - min)?
+                modbus::Client::read_holding_registers(tcp_client, min, max - min)?
             }
         };
 
-        let chunked = regs.iter().map(|reg| {
-            let start = (reg.address - min) as usize;
-            let size = reg.quantity as usize;
-            values[start..start + size].to_vec()
-        })
-        .collect();
+        let chunked = regs
+            .iter()
+            .map(|reg| {
+                let start = (reg.address - min) as usize;
+                let size = reg.quantity as usize;
+                values[start..start + size].to_vec()
+            })
+            .collect();
 
         Ok(chunked)
+    }
+
+    pub fn disconnect(&mut self) -> Result<(), modbus::Error> {
+        match self.client {
+            Client::TCP(ref mut tcp_client) => modbus::Transport::close(tcp_client),
+        }
     }
     // match mb_client.read_holding_registers(start_address, end_address - start_address) {
     //     Ok(res) => {
