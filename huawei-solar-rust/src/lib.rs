@@ -10,7 +10,6 @@ pub mod registers {
     use bit_vec::BitVec;
     use thiserror::Error;
 
-
     #[derive(Error, Debug)]
     pub enum RegisterError {
         #[error("Failed to convert: {0}")]
@@ -142,19 +141,6 @@ pub mod registers {
         STR(String),
     }
 
-    impl Display for Value {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            match self {
-                Value::U16(v) => write!(f, "{v}"),
-                Value::U32(v) => write!(f, "{v}"),
-                Value::I16(v) => write!(f, "{v}"),
-                Value::I32(v) => write!(f, "{v}"),
-                Value::BF (v) => write!(f, "{v:?}"),
-                Value::STR(v) => write!(f, "{v}"),
-            }
-        }
-    }
-
     pub struct RegValue<'a> {
         pub reg: &'a Register<'a>,
         pub val: Value,
@@ -166,17 +152,34 @@ pub mod registers {
                 Value::U32(v) => Ok(v as f64 * 10f64.pow(self.reg.gain)),
                 Value::I16(v) => Ok(v as f64 * 10f64.pow(self.reg.gain)),
                 Value::I32(v) => Ok(v as f64 * 10f64.pow(self.reg.gain)),
-                Value::BF(_) => Err(RegisterError::ValueConversion("Cannot convert bit field to float".to_string())),
-                Value::STR(_) => Err(RegisterError::ValueConversion("Cannot convert string to float".to_string())),
+                Value::BF(_) => Err(RegisterError::ValueConversion(
+                    "Cannot convert bit field to float".to_string(),
+                )),
+                Value::STR(_) => Err(RegisterError::ValueConversion(
+                    "Cannot convert string to float".to_string(),
+                )),
             }
         }
         pub fn to_string(self) -> Result<String, RegisterError> {
             match self.val {
                 Value::STR(v) => Ok(v),
-                _ => Err(RegisterError::ValueConversion("Cannot convert bit field to float".to_string())),
+                _ => Err(RegisterError::ValueConversion(
+                    "Cannot convert bit field to float".to_string(),
+                )),
             }
         }
     }
+
+    impl<'a> Display for RegValue<'a> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match &self.val {
+                Value::U16(_) | Value::U32(_) | Value::I16(_) | Value::I32(_) => write!(f, "{}{}", self.to_float().unwrap(), self.reg.unit.unwrap_or("")),
+                Value::BF(v) => write!(f, "{v:?}"),
+                Value::STR(v) => write!(f, "{v}"),
+            }
+        }
+    }
+
     pub enum Access {
         RO,
         WO,
@@ -422,9 +425,9 @@ impl Inverter {
                 Ok(registers::RegValue {
                     reg: reg,
                     val: reg
-                    .typ
-                    .convert(&val)
-                    .ok_or(modbus::Error::InvalidResponse)?
+                        .typ
+                        .convert(&val)
+                        .ok_or(modbus::Error::InvalidResponse)?,
                 })
             })
             .collect()

@@ -277,21 +277,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nInverter");
     println!(
         "\tModel: {} (ID: {})",
-        &info_vals[0].val,
-        &info_vals[3].val
+        &info_vals[0],
+        &info_vals[3]
     );
     println!(
         "\tSN/PN: {}/{}",
-        &info_vals[1].val,
-        &info_vals[2].val
+        &info_vals[1],
+        &info_vals[2]
     );
-    println!("\tStrings: {}", &info_vals[4].val,);
-    println!("\tTrackers: {}", &info_vals[5].val,);
+    println!("\tStrings: {}", &info_vals[4],);
+    println!("\tTrackers: {}", &info_vals[5],);
     println!("\tMaximum:");
-    println!("\t\tactive power  : {}", &info_vals[7].to_float().unwrap());
-    println!("\t\tapparent power: {}", &info_vals[8].to_float().unwrap());
-    println!("\t\treactive power -> grid: {}", &info_vals[9].to_float().unwrap());
-    println!("\t\tapparent power <- grid: {}", &info_vals[10].to_float().unwrap());
+    println!("\t\tactive power  : {}", &info_vals[7]);
+    println!("\t\tapparent power: {}", &info_vals[8]);
+    println!("\t\treactive power -> grid: {}", &info_vals[9]);
+    println!("\t\tapparent power <- grid: {}", &info_vals[10]);
     println!();
 
     for _ in 0..5 {
