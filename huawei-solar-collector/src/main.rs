@@ -238,7 +238,6 @@ use std::{
 use huawei_solar::registers::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     let ip = "192.168.200.1";
     let port = 6607;
     let modbus_uid = 0;
@@ -258,9 +257,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     println!("Connected!");
 
-    sleep(Duration::from_secs(1));
+    sleep(Duration::from_millis(50));
 
-    println!("{}", String::convert(inverter.read(MODEL)?).unwrap());
+    let info_regs = vec![
+        MODEL,
+        SN,
+        PN,
+        MODEL_ID,
+        NUMBER_OF_PV_STRINGS,
+        NUMBER_OF_MPP_TRACKERS,
+        RATED_POWER,
+        MAXIMUM_ACTIVE_POWER,
+        MAXIMUM_APPARENT_POWER,
+        MAXIMUM_REACTIVE_POWER_TO_GRID,
+        MAXIMUM_APPARENT_POWER_FROM_GRID,
+    ];
+    let info_vals = inverter.read_batch_raw(&info_regs)?;
+
+    println!("Inverter");
+    println!(
+        "\tModel: {} (ID: {})",
+        String::convert(info_vals.get(0).unwrap().clone()).unwrap(),
+        String::convert(info_vals.get(3).unwrap().clone()).unwrap()
+    );
+    println!(
+        "\tSN/PN: {}/{}",
+        String::convert(info_vals.get(1).unwrap().clone()).unwrap(),
+        String::convert(info_vals.get(2).unwrap().clone()).unwrap()
+    );
+    println!(
+        "\tStrings: {}",
+        String::convert(info_vals.get(4).unwrap().clone()).unwrap(),
+    );
+    println!(
+        "\tTrackers: {}",
+        String::convert(info_vals.get(5).unwrap().clone()).unwrap(),
+    );
+
 
     for _ in 0..10 {
         let now = Instant::now();
