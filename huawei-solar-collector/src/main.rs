@@ -257,7 +257,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     println!("Connected!");
 
-    sleep(Duration::from_millis(50));
+    sleep(Duration::from_millis(100));
 
     let info_regs = vec![
         MODEL,
