@@ -248,6 +248,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     println!("Connecting");
 
+    sleep(Duration::from_secs(1));
+
     for _ in 0..10 {
         let now = Instant::now();
         let active_pow = inverter.read(ACTIVE_POWER)?;
