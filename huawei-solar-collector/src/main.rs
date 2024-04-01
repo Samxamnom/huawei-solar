@@ -230,9 +230,12 @@
 //     }
 // }
 
-use std::{thread::sleep, time::Duration};
+use std::{
+    thread::sleep,
+    time::{Duration, Instant},
+};
 
-use huawei_solar::registers::ACTIVE_POWER;
+use huawei_solar::registers::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut inverter = huawei_solar::Inverter::connect_tcp(
@@ -245,10 +248,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     println!("Connecting");
 
-    loop {
+    loop {;
+        let now = Instant::now();
+        let active_pow = inverter.read(ACTIVE_POWER)?;
+        let time = now.elapsed();
+        println!("active power {:?} time {:?}", active_pow, time);
 
-        sleep(Duration::from_secs(2));
-        println!("active power {:?}", inverter.read(ACTIVE_POWER)?);
+        sleep(Duration::from_secs(1));
+
+        let now = Instant::now();
+        let active_pow = inverter.read_batch(&vec![
+            PV1_VOLTAGE,
+            PV1_CURRENT,
+            PV2_VOLTAGE,
+            PV2_CURRENT,
+            PV3_VOLTAGE,
+            PV3_CURRENT,
+            PV4_VOLTAGE,
+            PV4_CURRENT,
+        ])?;
+        let time = now.elapsed();
+        println!("batch {:?} time {:?}", active_pow, time);
+
+        sleep(Duration::from_secs(1))
     }
 
     // Ok(())
