@@ -294,7 +294,7 @@ impl Inverter {
         Ok(value)
     }
 
-    pub fn read_batch(self, regs: &[registers::Register]) -> Result<Vec<Vec<u16>>, modbus::Error> {
+    pub fn read_batch(&mut self, regs: &[registers::Register]) -> Result<Vec<Vec<u16>>, modbus::Error> {
         if regs.is_empty() {
             return Ok(Vec::new());
         }
@@ -303,7 +303,7 @@ impl Inverter {
         let max = regs.iter().map(|r| r.address + r.quantity as u16).min().unwrap();
 
         let values = match self.client {
-            Client::TCP(mut tcp_client) => {
+            Client::TCP(ref mut tcp_client) => {
                 tcp_client.read_holding_registers(min, max - min)?
             }
         };
