@@ -1,0 +1,148 @@
+db_timeout: "2s"
+modbus:
+  connect_timeout: "5s"
+  read_timeout: "5s"
+  write_timeout: "5s"
+  host: "192.168.200.1"
+  port: 6607
+queries:
+  - table: "plant_1"
+    cron: "*/30 * * * * * *" # every 30seconds
+    values:
+      - name: "voltage"
+        address: 32016
+        scale: 0.1
+        unit: "V"
+        type: "I16"
+      - name: "current"
+        address: 32017
+        scale: 0.01
+        unit: "A"
+        type: "I16"
+  - table: "plant_2"
+    cron: "*/30 * * * * * *"
+    values:
+      - name: "voltage"
+        address: 32018
+        scale: 0.1
+        unit: "V"
+        type: "I16"
+      - name: "current"
+        address: 32019
+        scale: 0.01
+        unit: "A"
+        type: "I16"
+  - table: "general_data"
+    cron: "*/30 * * * * * *"
+    values:
+      - name: "input_power"
+        address: 32064
+        scale: 0.001
+        unit: "kW"
+        type: "I32"
+      - name: "line_voltage_AB"
+        address: 32066
+        scale: 0.1
+        unit: "V"
+        type: "U16"
+      - name: "line_voltage_BC"
+        address: 32067
+        scale: 0.1
+        unit: "V"
+        type: "U16"
+      - name: "line_voltage_CA"
+        address: 32068
+        scale: 0.1
+        unit: "V"
+        type: "U16"
+      - name: "phase_a_voltage"
+        address: 32069
+        scale: 0.1
+        unit: "V"
+        type: "U16"
+      - name: "phase_b_voltage"
+        address: 32070
+        scale: 0.1
+        unit: "V"
+        type: "U16"
+      - name: "phase_c_voltage"
+        address: 32071
+        scale: 0.1
+        unit: "V"
+        type: "U16"
+      - name: "phase_a_current"
+        address: 32072
+        scale: 0.001
+        unit: "A"
+        type: "I32"
+      - name: "phase_b_current"
+        address: 32074
+        scale: 0.001
+        unit: "A"
+        type: "I32"
+      - name: "phase_c_current"
+        address: 32076
+        scale: 0.001
+        unit: "A"
+        type: "I32"
+      - name: "active_power"
+        address: 32080
+        scale: 0.001
+        unit: "kW"
+        type: "I32"
+      - name: "reactive_power"
+        address: 32082
+        scale: 0.001
+        unit: "kVar"
+        type: "I32"
+      - name: "rated_power"
+        address: 30073
+        scale: 0.001
+        unit: "kW"
+        type: "U32"
+      - name: "accu_energy_yield"
+        address: 32106
+        scale: 0.01
+        unit: "kWh"
+        type: "U32"
+      - name: "daily_energy_yield"
+        address: 32114
+        scale: 0.01
+        unit: "kWh"
+        type: "U32"
+  - table: "energy_storage"
+    cron: "0 * * * * * *"
+    values:
+      - name: "charge_discharge_power"
+        address: 37001
+        scale: 1.0
+        unit: "W"
+        type: "I32"
+      - name: "current_day_charge_capacity"
+        address: 37015
+        scale: 0.01
+        unit: "kWh"
+        type: "U32"
+      - name: "current_day_discharge_capacity"
+        address: 37017
+        scale: 0.01
+        unit: "kWh"
+        type: "U32"
+      - name: "active_power"
+        address: 37113
+        scale: 1.0
+        unit: "W"
+        type: "I32"
+  - table: "monitoring"
+    cron: "0 * * * * * *" # every minute
+    values:
+      - name: "efficiency"
+        address: 32086
+        scale: 0.01
+        unit: "%"
+        type: "U16"
+      - name: "internal_temperature"
+        address: 32087
+        scale: 0.1
+        unit: "°C"
+        type: "I16"
