@@ -238,17 +238,29 @@ use std::{
 use huawei_solar::registers::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+    let ip = "192.168.200.1";
+    let port = 6607;
+    let modbus_uid = 0;
+
+    println!("Connecting to Inverter over TCP");
+    println!("\tIP       : {}", ip);
+    println!("\tport     : {}", port);
+    println!("\tmodbus id: {}", modbus_uid);
+
     let mut inverter = huawei_solar::Inverter::connect_tcp(
-        Some("192.168.200.1"),
-        Some(6607),
-        Some(0),
+        Some(ip),
+        Some(port),
+        Some(modbus_uid),
         Some(Duration::from_secs(5)),
         Some(Duration::from_secs(5)),
         Some(Duration::from_secs(5)),
     )?;
-    println!("Connecting");
+    println!("Connected!");
 
     sleep(Duration::from_secs(1));
+
+    println!("{}", String::convert(inverter.read(MODEL)?).unwrap());
 
     for _ in 0..10 {
         let now = Instant::now();
