@@ -7,70 +7,70 @@ use modbus::Transport;
 pub mod registers {
     use bit_vec::BitVec;
     pub trait RegisterType {
-        fn convert(vec: Vec<u16>) -> Option<Self>
+        fn convert(vec: &[u16]) -> Option<Self>
         where
             Self: Sized;
     }
     impl RegisterType for String {
-        fn convert(vec: Vec<u16>) -> Option<Self> {
+        fn convert(vec: &[u16]) -> Option<Self> {
             String::from_utf8(vec.into_iter().flat_map(|u| u.to_be_bytes()).collect()).ok()
         }
     }
     impl RegisterType for u16 {
-        fn convert(vec: Vec<u16>) -> Option<Self> {
+        fn convert(vec: &[u16]) -> Option<Self> {
             vec.first().copied()
         }
     }
     #[test]
     fn convert_u16() {
-        assert_eq!(u16::convert(vec![u16::MIN]), Some(u16::MIN));
-        assert_eq!(u16::convert(vec![0u16]), Some(0u16));
-        assert_eq!(u16::convert(vec![1u16]), Some(1u16));
-        assert_eq!(u16::convert(vec![u16::MAX]), Some(u16::MAX));
+        assert_eq!(u16::convert(&vec![u16::MIN]), Some(u16::MIN));
+        assert_eq!(u16::convert(&vec![0u16]), Some(0u16));
+        assert_eq!(u16::convert(&vec![1u16]), Some(1u16));
+        assert_eq!(u16::convert(&vec![u16::MAX]), Some(u16::MAX));
     }
     impl RegisterType for u32 {
-        fn convert(vec: Vec<u16>) -> Option<Self> {
+        fn convert(vec: &[u16]) -> Option<Self> {
             Some((vec[0] as u32) << 16 | vec[1] as u32)
         }
     }
     #[test]
     fn convert_u32() {
-        assert_eq!(u32::convert(vec![u16::MIN, u16::MIN]), Some(u32::MIN));
-        assert_eq!(u32::convert(vec![0u16, 0u16]), Some(0u32));
+        assert_eq!(u32::convert(&vec![u16::MIN, u16::MIN]), Some(u32::MIN));
+        assert_eq!(u32::convert(&vec![0u16, 0u16]), Some(0u32));
         assert_eq!(
-            u32::convert(vec![0x000Fu16, 0xF0FFu16]),
+            u32::convert(&vec![0x000Fu16, 0xF0FFu16]),
             Some(0x000FF0FFu32)
         );
-        assert_eq!(u32::convert(vec![u16::MAX, u16::MAX]), Some(u32::MAX));
+        assert_eq!(u32::convert(&vec![u16::MAX, u16::MAX]), Some(u32::MAX));
     }
 
     impl RegisterType for i16 {
-        fn convert(vec: Vec<u16>) -> Option<Self> {
+        fn convert(vec: &[u16]) -> Option<Self> {
             vec.first().map(|v| *v as i16)
         }
     }
 
     #[test]
     fn convert_i16() {
-        assert_eq!(i16::convert(vec![0u16]), Some(0i16));
-        assert_eq!(i16::convert(vec![1u16]), Some(1i16));
-        assert_eq!(i16::convert(vec![u16::MAX]), Some(-1i16));
+        assert_eq!(i16::convert(&vec![0u16]), Some(0i16));
+        assert_eq!(i16::convert(&vec![1u16]), Some(1i16));
+        assert_eq!(i16::convert(&vec![u16::MAX]), Some(-1i16));
     }
 
     impl RegisterType for i32 {
-        fn convert(vec: Vec<u16>) -> Option<Self> {
+        fn convert(vec: &[u16]) -> Option<Self> {
             Some((vec[0] as i32) << 16 | vec[1] as i32)
         }
     }
     #[test]
     fn convert_i32() {
-        assert_eq!(<i32 as RegisterType>::convert(vec![0u16, 0u16]), Some(0i32));
+        assert_eq!(<i32 as RegisterType>::convert(&vec![0u16, 0u16]), Some(0i32));
         assert_eq!(
-            <i32 as RegisterType>::convert(vec![0x000Fu16, 0xF0FFu16]),
+            <i32 as RegisterType>::convert(&vec![0x000Fu16, 0xF0FFu16]),
             Some(0x000FF0FFi32)
         );
         assert_eq!(
-            <i32 as RegisterType>::convert(vec![u16::MAX, u16::MAX]),
+            <i32 as RegisterType>::convert(&vec![u16::MAX, u16::MAX]),
             Some(-1i32)
         );
     }
@@ -78,7 +78,7 @@ pub mod registers {
     // TODO
     // BitVec read bits from MSB to LSB -- probably wrong direction
     impl RegisterType for BitVec {
-        fn convert(vec: Vec<u16>) -> Option<Self> {
+        fn convert(vec: &[u16]) -> Option<Self> {
             let bytes = vec
                 .iter()
                 .flat_map(|&num| num.to_be_bytes())
@@ -91,9 +91,9 @@ pub mod registers {
     #[test]
     #[rustfmt::skip]
     fn convert_bf() {
-        assert!(BitVec::convert(vec![0u16, 0u16]).unwrap().capacity() >= 32);
-        assert_eq!(BitVec::convert(vec![0u16, 0u16]).unwrap()[0], false);
-        assert_eq!(BitVec::convert(vec![8u16, 0u16]).unwrap()[12], true);
+        assert!(BitVec::convert(&vec![0u16, 0u16]).unwrap().capacity() >= 32);
+        assert_eq!(BitVec::convert(&vec![0u16, 0u16]).unwrap()[0], false);
+        assert_eq!(BitVec::convert(&vec![8u16, 0u16]).unwrap()[12], true);
     }
 
     #[derive(Debug)]
@@ -107,7 +107,7 @@ pub mod registers {
     }
     impl RegType {
         #[rustfmt::skip]
-        pub fn convert(&self, val: Vec<u16>) -> Option<RegValue> {
+        pub fn convert(&self, val: &Vec<u16>) -> Option<RegValue> {
             match self {
                 RegType::U16 => Some(RegValue::U16(   u16::convert(val)?)),
                 RegType::U32 => Some(RegValue::U32(   u32::convert(val)?)),
@@ -337,7 +337,7 @@ impl Inverter {
             .into_iter()
             .zip(regs)
             .map(|(val, reg)| -> Result<registers::RegValue, modbus::Error> {
-                Ok(reg.typ.convert(val).ok_or(modbus::Error::InvalidResponse)?)
+                Ok(reg.typ.convert(&val).ok_or(modbus::Error::InvalidResponse)?)
             })
             .collect()
     }
