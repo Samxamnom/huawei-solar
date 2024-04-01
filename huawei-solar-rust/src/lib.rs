@@ -310,7 +310,7 @@ impl Inverter {
         let max = regs
             .iter()
             .map(|r| r.address + r.quantity as u16)
-            .min()
+            .max()
             .unwrap();
 
         println!("min max: {} {}", min, max);
