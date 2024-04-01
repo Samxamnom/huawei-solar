@@ -391,13 +391,11 @@ impl Inverter {
             .max()
             .unwrap();
 
-        println!("min max: {} {}", min, max);
         let values = match self.client {
             Client::TCP(ref mut tcp_client) => {
                 modbus::Client::read_holding_registers(tcp_client, min, max - min)?
             }
         };
-        println!("values: {:?}", values);
 
         let chunked = regs
             .iter()

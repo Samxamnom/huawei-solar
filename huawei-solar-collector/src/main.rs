@@ -274,7 +274,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     let info_vals = inverter.read_batch(&info_regs)?;
 
-    println!("Inverter");
+    println!("\nInverter");
     println!(
         "\tModel: {} (ID: {})",
         &info_vals[0].val,
@@ -292,6 +292,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\t\tapparent power: {}", &info_vals[8].to_float().unwrap());
     println!("\t\treactive power -> grid: {}", &info_vals[9].to_float().unwrap());
     println!("\t\tapparent power <- grid: {}", &info_vals[10].to_float().unwrap());
+    println!();
 
     for _ in 0..5 {
         let now = Instant::now();
