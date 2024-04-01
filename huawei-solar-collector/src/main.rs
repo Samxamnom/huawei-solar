@@ -259,7 +259,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         sleep(Duration::from_secs(1));
 
         let now = Instant::now();
-        let active_pow = inverter.read_batch(&vec![
+        let regs = &vec![
             PV1_VOLTAGE,
             PV1_CURRENT,
             PV2_VOLTAGE,
@@ -268,7 +268,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             PV3_CURRENT,
             PV4_VOLTAGE,
             PV4_CURRENT,
-        ])?;
+        ];
+        let active_pow = inverter
+            .read_batch(regs)?
+            .into_iter()
+            .zip(regs)
+            .for_each(|(val, reg)| {
+                println!("{:?}: {:?}", reg.name, val);
+            });
         let time = now.elapsed();
         println!("batch {:?} time {:?}", active_pow, time);
 

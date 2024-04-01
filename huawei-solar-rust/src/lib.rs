@@ -102,6 +102,38 @@ pub mod registers {
         assert_eq!(<BitVec as RegisterType>::from(vec![8u16, 0u16]).unwrap()[12], true);
     }
 
+    #[derive(Debug)]
+    pub enum RegType {
+        U16,
+        U32,
+        I16,
+        I32,
+        BF,
+        STR,
+    }
+    impl RegType {
+        pub fn convert(&self, val: Vec<u16>) -> Option<RegValue> {
+            match self {
+                RegType::U16 => Some(RegValue::U16(<u16 as RegisterType>::from(val)?)),
+                RegType::U32 => Some(RegValue::U32(<u32 as RegisterType>::from(val)?)),
+                RegType::I16 => Some(RegValue::I16(<i16 as RegisterType>::from(val)?)),
+                RegType::I32 => Some(RegValue::I32(<i32 as RegisterType>::from(val)?)),
+                RegType::BF => Some(RegValue::BF(<BitVec as RegisterType>::from(val)?)),
+                RegType::STR => Some(RegValue::STR(<String as RegisterType>::from(val)?)),
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub enum RegValue {
+        U16(u16),
+        U32(u32),
+        I16(i16),
+        I32(i32),
+        BF(BitVec),
+        STR(String),
+    }
+
     pub enum Access {
         RO,
         WO,
@@ -114,6 +146,8 @@ pub mod registers {
         pub gain: u8,
         pub unit: Option<&'a str>,
         pub access: Access,
+        pub typ: RegType,
+        pub name: &'a str,
         // typ: std::marker::PhantomData<T>,
     }
 
@@ -121,57 +155,57 @@ pub mod registers {
     #[rustfmt::skip]
     mod nofmt {
         // use bit_vec::BitVec;
-        use super::{Access, Register};
+        use super::{Access, RegType, Register};
 
-        pub const MODEL:                            Register/* <String> */ = Register/* ::<String> */ { address: 30000, quantity: 15, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const SN:                               Register/* <String> */ = Register/* ::<String> */ { address: 30015, quantity: 10, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PN:                               Register/* <String> */ = Register/* ::<String> */ { address: 30025, quantity: 10, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const MODEL_ID:                         Register/* <u16>    */ = Register/* ::<u16>    */ { address: 30070, quantity:  1, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const NUMBER_OF_PV_STRINGS:             Register/* <u16>    */ = Register/* ::<u16>    */ { address: 30071, quantity:  1, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const NUMBER_OF_MPP_TRACKERS:           Register/* <u16>    */ = Register/* ::<u16>    */ { address: 30072, quantity:  1, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const RATED_POWER:                      Register/* <u32>    */ = Register/* ::<u32>    */ { address: 30073, quantity:  2, gain: 3, unit: Some("kW")  , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const MAXIMUM_ACTIVE_POWER:             Register/* <u32>    */ = Register/* ::<u32>    */ { address: 30075, quantity:  2, gain: 3, unit: Some("kW")  , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const MAXIMUM_APPARENT_POWER:           Register/* <u32>    */ = Register/* ::<u32>    */ { address: 30077, quantity:  2, gain: 3, unit: Some("kVA") , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const MAXIMUM_REACTIVE_POWER_TO_GRID:   Register/* <i32>    */ = Register/* ::<i32>    */ { address: 30079, quantity:  2, gain: 3, unit: Some("kVar"), access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const MAXIMUM_APPARENT_POWER_FROM_GRID: Register/* <i32>    */ = Register/* ::<i32>    */ { address: 30081, quantity:  2, gain: 3, unit: Some("kVar"), access: Access::RO/* , typ: std::marker::PhantomData */ };
+        pub const MODEL:                            Register = Register { address: 30000, quantity: 15, gain: 0, unit: None        , access: Access::RO, typ: RegType::STR, name: "MODEL"                            };
+        pub const SN:                               Register = Register { address: 30015, quantity: 10, gain: 0, unit: None        , access: Access::RO, typ: RegType::STR, name: "SN"                               };
+        pub const PN:                               Register = Register { address: 30025, quantity: 10, gain: 0, unit: None        , access: Access::RO, typ: RegType::STR, name: "PN"                               };
+        pub const MODEL_ID:                         Register = Register { address: 30070, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: RegType::U16, name: "MODEL_ID"                         };
+        pub const NUMBER_OF_PV_STRINGS:             Register = Register { address: 30071, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: RegType::U16, name: "NUMBER_OF_PV_STRINGS"             };
+        pub const NUMBER_OF_MPP_TRACKERS:           Register = Register { address: 30072, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: RegType::U16, name: "NUMBER_OF_MPP_TRACKERS"           };
+        pub const RATED_POWER:                      Register = Register { address: 30073, quantity:  2, gain: 3, unit: Some("kW")  , access: Access::RO, typ: RegType::U32, name: "RATED_POWER"                      };
+        pub const MAXIMUM_ACTIVE_POWER:             Register = Register { address: 30075, quantity:  2, gain: 3, unit: Some("kW")  , access: Access::RO, typ: RegType::U32, name: "MAXIMUM_ACTIVE_POWER"             };
+        pub const MAXIMUM_APPARENT_POWER:           Register = Register { address: 30077, quantity:  2, gain: 3, unit: Some("kVA") , access: Access::RO, typ: RegType::U32, name: "MAXIMUM_APPARENT_POWER"           };
+        pub const MAXIMUM_REACTIVE_POWER_TO_GRID:   Register = Register { address: 30079, quantity:  2, gain: 3, unit: Some("kVar"), access: Access::RO, typ: RegType::I32, name: "MAXIMUM_REACTIVE_POWER_TO_GRID"   };
+        pub const MAXIMUM_APPARENT_POWER_FROM_GRID: Register = Register { address: 30081, quantity:  2, gain: 3, unit: Some("kVar"), access: Access::RO, typ: RegType::I32, name: "MAXIMUM_APPARENT_POWER_FROM_GRID" };
 
-        pub const STATE_1:                          Register/* <BitVec> */ = Register/* ::<BitVec> */ { address: 32000, quantity:  1, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const STATE_2:                          Register/* <BitVec> */ = Register/* ::<BitVec> */ { address: 32002, quantity:  1, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const STATE_3:                          Register/* <BitVec> */ = Register/* ::<BitVec> */ { address: 32003, quantity:  2, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const ALARM_1:                          Register/* <BitVec> */ = Register/* ::<BitVec> */ { address: 32008, quantity:  1, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const ALARM_2:                          Register/* <BitVec> */ = Register/* ::<BitVec> */ { address: 32009, quantity:  1, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const ALARM_3:                          Register/* <BitVec> */ = Register/* ::<BitVec> */ { address: 32010, quantity:  1, gain: 0, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
+        pub const STATE_1:                          Register = Register { address: 32000, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: RegType::BF , name: "STATE_1"                          };
+        pub const STATE_2:                          Register = Register { address: 32002, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: RegType::BF , name: "STATE_2"                          };
+        pub const STATE_3:                          Register = Register { address: 32003, quantity:  2, gain: 0, unit: None        , access: Access::RO, typ: RegType::BF , name: "STATE_3"                          };
+        pub const ALARM_1:                          Register = Register { address: 32008, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: RegType::BF , name: "ALARM_1"                          };
+        pub const ALARM_2:                          Register = Register { address: 32009, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: RegType::BF , name: "ALARM_2"                          };
+        pub const ALARM_3:                          Register = Register { address: 32010, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: RegType::BF , name: "ALARM_3"                          };
 
-        pub const PV1_VOLTAGE:                      Register/* <i16>    */ = Register/* ::<i16>    */ { address: 32016, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PV1_CURRENT:                      Register/* <i16>    */ = Register/* ::<i16>    */ { address: 32017, quantity:  1, gain: 2, unit: Some("A")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PV2_VOLTAGE:                      Register/* <i16>    */ = Register/* ::<i16>    */ { address: 32018, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PV2_CURRENT:                      Register/* <i16>    */ = Register/* ::<i16>    */ { address: 32019, quantity:  1, gain: 2, unit: Some("A")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PV3_VOLTAGE:                      Register/* <i16>    */ = Register/* ::<i16>    */ { address: 32020, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PV3_CURRENT:                      Register/* <i16>    */ = Register/* ::<i16>    */ { address: 32021, quantity:  1, gain: 2, unit: Some("A")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PV4_VOLTAGE:                      Register/* <i16>    */ = Register/* ::<i16>    */ { address: 32022, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PV4_CURRENT:                      Register/* <i16>    */ = Register/* ::<i16>    */ { address: 32023, quantity:  1, gain: 2, unit: Some("A")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
+        pub const PV1_VOLTAGE:                      Register = Register { address: 32016, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO, typ: RegType::I16, name: "PV1_VOLTAGE"                      };
+        pub const PV1_CURRENT:                      Register = Register { address: 32017, quantity:  1, gain: 2, unit: Some("A")   , access: Access::RO, typ: RegType::I16, name: "PV1_CURRENT"                      };
+        pub const PV2_VOLTAGE:                      Register = Register { address: 32018, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO, typ: RegType::I16, name: "PV2_VOLTAGE"                      };
+        pub const PV2_CURRENT:                      Register = Register { address: 32019, quantity:  1, gain: 2, unit: Some("A")   , access: Access::RO, typ: RegType::I16, name: "PV2_CURRENT"                      };
+        pub const PV3_VOLTAGE:                      Register = Register { address: 32020, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO, typ: RegType::I16, name: "PV3_VOLTAGE"                      };
+        pub const PV3_CURRENT:                      Register = Register { address: 32021, quantity:  1, gain: 2, unit: Some("A")   , access: Access::RO, typ: RegType::I16, name: "PV3_CURRENT"                      };
+        pub const PV4_VOLTAGE:                      Register = Register { address: 32022, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO, typ: RegType::I16, name: "PV4_VOLTAGE"                      };
+        pub const PV4_CURRENT:                      Register = Register { address: 32023, quantity:  1, gain: 2, unit: Some("A")   , access: Access::RO, typ: RegType::I16, name: "PV4_CURRENT"                      };
 
-        pub const INPUT_POWER:                      Register/* <i32>    */ = Register/* ::<i32>    */ { address: 32064, quantity:  2, gain: 3, unit: Some("kW")  , access: Access::RO/* , typ: std::marker::PhantomData */ };
+        pub const INPUT_POWER:                      Register = Register { address: 32064, quantity:  2, gain: 3, unit: Some("kW")  , access: Access::RO, typ: RegType::I32, name: "INPUT_POWER"                      };
 
-        pub const LINE_VOLTAGE_A_B:                 Register/* <u16>    */ = Register/* ::<u16>    */ { address: 32066, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const LINE_VOLTAGE_B_C:                 Register/* <u16>    */ = Register/* ::<u16>    */ { address: 32067, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const LINE_VOLTAGE_C_A:                 Register/* <u16>    */ = Register/* ::<u16>    */ { address: 32068, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PHASE_VOLTAGE_A:                  Register/* <u16>    */ = Register/* ::<u16>    */ { address: 32069, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PHASE_VOLTAGE_B:                  Register/* <u16>    */ = Register/* ::<u16>    */ { address: 32070, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PHASE_VOLTAGE_C:                  Register/* <u16>    */ = Register/* ::<u16>    */ { address: 32071, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PHASE_CURRENT_A:                  Register/* <i32>    */ = Register/* ::<i32>    */ { address: 32072, quantity:  2, gain: 3, unit: Some("A")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PHASE_CURRENT_B:                  Register/* <i32>    */ = Register/* ::<i32>    */ { address: 32074, quantity:  2, gain: 3, unit: Some("A")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const PHASE_CURRENT_C:                  Register/* <i32>    */ = Register/* ::<i32>    */ { address: 32076, quantity:  2, gain: 3, unit: Some("A")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
+        pub const LINE_VOLTAGE_A_B:                 Register = Register { address: 32066, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO, typ: RegType::U16, name: "LINE_VOLTAGE_A_B"                 };
+        pub const LINE_VOLTAGE_B_C:                 Register = Register { address: 32067, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO, typ: RegType::U16, name: "LINE_VOLTAGE_B_C"                 };
+        pub const LINE_VOLTAGE_C_A:                 Register = Register { address: 32068, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO, typ: RegType::U16, name: "LINE_VOLTAGE_C_A"                 };
+        pub const PHASE_VOLTAGE_A:                  Register = Register { address: 32069, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO, typ: RegType::U16, name: "PHASE_VOLTAGE_A"                  };
+        pub const PHASE_VOLTAGE_B:                  Register = Register { address: 32070, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO, typ: RegType::U16, name: "PHASE_VOLTAGE_B"                  };
+        pub const PHASE_VOLTAGE_C:                  Register = Register { address: 32071, quantity:  1, gain: 1, unit: Some("V")   , access: Access::RO, typ: RegType::U16, name: "PHASE_VOLTAGE_C"                  };
+        pub const PHASE_CURRENT_A:                  Register = Register { address: 32072, quantity:  2, gain: 3, unit: Some("A")   , access: Access::RO, typ: RegType::I32, name: "PHASE_CURRENT_A"                  };
+        pub const PHASE_CURRENT_B:                  Register = Register { address: 32074, quantity:  2, gain: 3, unit: Some("A")   , access: Access::RO, typ: RegType::I32, name: "PHASE_CURRENT_B"                  };
+        pub const PHASE_CURRENT_C:                  Register = Register { address: 32076, quantity:  2, gain: 3, unit: Some("A")   , access: Access::RO, typ: RegType::I32, name: "PHASE_CURRENT_C"                  };
 
-        pub const PEAK_ACTIVE_POWER_DAY:            Register/* <i32>    */ = Register/* ::<i32>    */ { address: 32078, quantity:  2, gain: 3, unit: Some("kW")  , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const ACTIVE_POWER:                     Register/* <i32>    */ = Register/* ::<i32>    */ { address: 32080, quantity:  2, gain: 3, unit: Some("kW")  , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const REACTIVE_POWER:                   Register/* <i32>    */ = Register/* ::<i32>    */ { address: 32082, quantity:  2, gain: 3, unit: Some("kVar"), access: Access::RO/* , typ: std::marker::PhantomData */ };
+        pub const PEAK_ACTIVE_POWER_DAY:            Register = Register { address: 32078, quantity:  2, gain: 3, unit: Some("kW")  , access: Access::RO, typ: RegType::I32, name: "PEAK_ACTIVE_POWER_DAY"            };
+        pub const ACTIVE_POWER:                     Register = Register { address: 32080, quantity:  2, gain: 3, unit: Some("kW")  , access: Access::RO, typ: RegType::I32, name: "ACTIVE_POWER"                     };
+        pub const REACTIVE_POWER:                   Register = Register { address: 32082, quantity:  2, gain: 3, unit: Some("kVar"), access: Access::RO, typ: RegType::I32, name: "REACTIVE_POWER"                   };
 
-        pub const POWER_FACTOR:                     Register/* <i16>    */ = Register/* ::<i16>    */ { address: 32084, quantity:  1, gain: 3, unit: None        , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const GRID_FREQUENCY:                   Register/* <u16>    */ = Register/* ::<u16>    */ { address: 32085, quantity:  1, gain: 2, unit: Some("Hz")  , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const EFFICIENCY:                       Register/* <u16>    */ = Register/* ::<u16>    */ { address: 32086, quantity:  1, gain: 2, unit: Some("%")   , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const INTERNAL_TEMPERATURE:             Register/* <i16>    */ = Register/* ::<i16>    */ { address: 32087, quantity:  1, gain: 1, unit: Some("°C")  , access: Access::RO/* , typ: std::marker::PhantomData */ };
-        pub const INSULATION_RESISTANCE:            Register/* <u16>    */ = Register/* ::<u16>    */ { address: 32088, quantity:  1, gain: 3, unit: Some("MΩ")  , access: Access::RO/* , typ: std::marker::PhantomData */ };
+        pub const POWER_FACTOR:                     Register = Register { address: 32084, quantity:  1, gain: 3, unit: None        , access: Access::RO, typ: RegType::I16, name: "POWER_FACTOR"                     };
+        pub const GRID_FREQUENCY:                   Register = Register { address: 32085, quantity:  1, gain: 2, unit: Some("Hz")  , access: Access::RO, typ: RegType::U16, name: "GRID_FREQUENCY"                   };
+        pub const EFFICIENCY:                       Register = Register { address: 32086, quantity:  1, gain: 2, unit: Some("%")   , access: Access::RO, typ: RegType::U16, name: "EFFICIENCY"                       };
+        pub const INTERNAL_TEMPERATURE:             Register = Register { address: 32087, quantity:  1, gain: 1, unit: Some("°C")  , access: Access::RO, typ: RegType::I16, name: "INTERNAL_TEMPERATURE"             };
+        pub const INSULATION_RESISTANCE:            Register = Register { address: 32088, quantity:  1, gain: 3, unit: Some("MΩ")  , access: Access::RO, typ: RegType::U16, name: "INSULATION_RESISTANCE"            };
 
     }
 }
@@ -301,6 +335,21 @@ impl Inverter {
     pub fn read_batch(
         &mut self,
         regs: &[registers::Register],
+        // fun: fn(&registers::Register, registers::RegValue),
+    ) -> Result<Vec<registers::RegValue>, modbus::Error> {
+        let values = Inverter::read_batch_raw(self, regs)?;
+        values
+            .into_iter()
+            .zip(regs)
+            .map(|(val, reg)| -> Result<registers::RegValue, modbus::Error> {
+                Ok(reg.typ.convert(val).ok_or(modbus::Error::InvalidResponse)?)
+            })
+            .collect()
+    }
+
+    pub fn read_batch_raw(
+        &mut self,
+        regs: &[registers::Register],
     ) -> Result<Vec<Vec<u16>>, modbus::Error> {
         if regs.is_empty() {
             return Ok(Vec::new());
@@ -320,8 +369,6 @@ impl Inverter {
             }
         };
         println!("values: {:?}", values);
-
-
 
         let chunked = regs
             .iter()
