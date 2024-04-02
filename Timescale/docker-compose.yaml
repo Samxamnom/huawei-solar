@@ -26,7 +26,7 @@ services:
     ports:
       - 80:8088
     volumes:
-    - superset_home:/app/superset_home
+    - superset:/app/superset_home
     environment:
     - SUPERSET_SECRET_KEY=your_secret_key_here
 
