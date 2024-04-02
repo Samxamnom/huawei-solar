@@ -244,8 +244,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let modbus_uid = 0;
 
     println!("Connecting to Inverter over TCP");
-    println!("\tIP       : {}", ip);
-    println!("\tport     : {}", port);
+    println!("\tIP: {}", ip);
+    println!("\tport: {}", port);
     println!("\tmodbus id: {}", modbus_uid);
 
     let mut inverter = huawei_solar::Inverter::connect_tcp(
@@ -304,8 +304,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
     if let Value::U32(val) = info_vals2[4].val {
-        println!("val {}", val);
-        println!("\tShutdown: {:?}", DateTime::from_timestamp(val as i64, 0));
+        if val != u32::MAX {
+            println!(
+                "\tShutdown: {:?}",
+                DateTime::from_timestamp(val as i64, 0)
+                    .map(|t| t.format("%Y-%m-%d %H:%M:%S").to_string())
+                    .unwrap_or("invalid".to_string())
+            );
+        }
     }
     println!("\tStrings: {}", &info_vals[4],);
     println!("\tTrackers: {}", &info_vals[5],);
@@ -326,11 +332,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     let storage_info_vals = inverter.read_batch(&storage_info_regs)?;
 
-    println!("\tStorage: {}", &info_vals[4],);
-    println!("\t\trunning status: {}", &info_vals[7]);
-    println!("\t\tapparent power: {}", &info_vals[8]);
-    println!("\t\treactive power -> grid: {}", &info_vals[9]);
-    println!("\t\tapparent power <- grid: {}", &info_vals[10]);
+    println!("\tStorage:");
+    println!("\t\trunning status: {}", &storage_info_vals[0]);
+    println!("\t\tcurrent discharge: {}", &storage_info_vals[1]);
+    println!("\t\tcharge capacity    (today): {}", &storage_info_vals[2]);
+    println!("\t\tdischarge capacity (today): {}", &storage_info_vals[3]);
 
     for _ in 0..5 {
         let now = Instant::now();
