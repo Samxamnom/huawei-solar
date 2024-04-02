@@ -206,22 +206,6 @@
 //     }
 // }
 
-// fn connect_database(retries: u8, delay: Duration) -> Result<postgres::Client, Box<dyn std::error::Error>> {
-//     match postgres::Client::connect(&format!("host={} user={} password={} dbname={} connect_timeout=20",
-//         env::var("DB_HOST")?, env::var("DB_USER")?,
-//         env::var("DB_PASS")?, env::var("DB_NAME")?), NoTls) {
-//         Err(e) => {
-//             if retries > 0 {
-//                 sleep(delay);
-//                 connect_database(retries - 1, delay)
-//             } else {
-//                 Err(Box::new(e))
-//             }
-//         }
-//         Ok(client) => Ok(client),
-//     }
-// }
-
 use std::{
     env,
     thread::sleep,
@@ -346,19 +330,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!();
     println!("Connecting to Timescale database");
-
-    let db_timeout = 200;
-    let mut db_client = postgres::Client::connect(
-        &format!(
-            "host={} user={} password={} dbname={} connect_timeout={}",
-            env::var("DB_HOST")?,
-            env::var("DB_USER")?,
-            env::var("DB_PASS")?,
-            env::var("DB_NAME")?,
-            db_timeout
-        ),
-        NoTls,
-    )?;
+    let mut db_client = connect_database(12, Duration::from_secs(5))?;
+    println!("Connected!");
 
     let mut tables = vec![
         DbTable {
@@ -434,7 +407,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     + ","
                     + &elem)
         ));
-    };
+    }
 
     db_client.batch_execute(&create_queries.join(";"))?;
 
@@ -469,4 +442,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     inverter.disconnect()?;
 
     Ok(())
+}
+fn connect_database(
+    retries: u8,
+    delay: Duration,
+) -> Result<postgres::Client, Box<dyn std::error::Error>> {
+    let db_timeout = 10;
+    match postgres::Client::connect(
+        &format!(
+            "host={} user={} password={} dbname={} connect_timeout={}",
+            env::var("DB_HOST")?,
+            env::var("DB_USER")?,
+            env::var("DB_PASS")?,
+            env::var("DB_NAME")?,
+            db_timeout
+        ),
+        NoTls,
+    ) {
+        Ok(client) => Ok(client),
+        Err(e) => {
+            if retries > 0 {
+                sleep(delay);
+                connect_database(retries - 1, delay)
+            } else {
+                Err(Box::new(e))
+            }
+        }
+    }
 }
