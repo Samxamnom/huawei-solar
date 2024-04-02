@@ -308,6 +308,16 @@ pub mod registers {
             use crate::registers::{Access, Register, Type};
 
             pub const RUNNING_STATUS:               Register = Register { address: 37000, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: Type::U16, name: "RUNNING_STATUS"                   };
+            pub const fn running_status_to_string(status: u16) -> Option<&'static str> {
+                match status {
+                    0 => Some("offline"),
+                    1 => Some("standby"),
+                    2 => Some("running"),
+                    3 => Some("fault"),
+                    4 => Some("sleep mode"),
+                    _ => None
+                }
+            }
             pub const CHARGE_DISCHARGE_POWER:       Register = Register { address: 37001, quantity:  2, gain: 0, unit: Some("W")   , access: Access::RO, typ: Type::I32, name: "CHARGE_DISCHARGE_POWER"           };
             pub const CHARGE_CAPACITY_DAY:          Register = Register { address: 37015, quantity:  2, gain: 2, unit: Some("kWh") , access: Access::RO, typ: Type::U32, name: "CHARGE_CAPACITY_DAY"              };
             pub const DISCHARGE_CAPACITY_DAY:       Register = Register { address: 37017, quantity:  2, gain: 2, unit: Some("kWh") , access: Access::RO, typ: Type::U32, name: "DISCHARGE_CAPACITY_DAY"           };
