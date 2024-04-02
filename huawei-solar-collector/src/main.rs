@@ -235,6 +235,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use chrono::DateTime;
 use huawei_solar::registers::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -286,24 +287,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let info_vals2 = inverter.read_batch(&info_regs)?;
 
     println!("\nInverter");
-    println!(
-        "\tModel: {} (ID: {})",
-        &info_vals[0],
-        &info_vals[3]
-    );
-    println!(
-        "\tSN/PN: {}/{}",
-        &info_vals[1],
-        &info_vals[2]
-    );
+    println!("\tModel: {} (ID: {})", &info_vals[0], &info_vals[3]);
+    println!("\tSN/PN: {}/{}", &info_vals[1], &info_vals[2]);
     if let Value::U16(val) = info_vals2[2].val {
-        println!("\tStatus: {}", device_status_to_string(val).unwrap_or("invalid"));
+        println!(
+            "\tStatus: {}",
+            device_status_to_string(val).unwrap_or("invalid")
+        );
     }
     if let Value::U32(val) = info_vals2[3].val {
-        println!("\tStartup: {:?}", chrono::DateTime::from_timestamp(val as i64, 0));
+        println!(
+            "\tStartup: {:?}",
+            DateTime::from_timestamp(val as i64, 0)
+                .map(|t| t.format("%Y-%m-%d %H:%M:%S").to_string())
+                .unwrap_or("invalid".to_string())
+        );
     }
     if let Value::U32(val) = info_vals2[4].val {
-        println!("\tShutdown: {:?}", chrono::DateTime::from_timestamp(val as i64, 0));
+        println!("val {}", val);
+        println!("\tShutdown: {:?}", DateTime::from_timestamp(val as i64, 0));
     }
     println!("\tStrings: {}", &info_vals[4],);
     println!("\tTrackers: {}", &info_vals[5],);
@@ -315,7 +317,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     sleep(Duration::from_millis(1000));
-    
+
     let storage_info_regs = vec![
         storage::RUNNING_STATUS,
         storage::CHARGE_DISCHARGE_POWER,
