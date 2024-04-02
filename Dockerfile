@@ -11,7 +11,7 @@ WORKDIR /usr/src/huawei-solar-collector
 RUN cargo build --release
 
 # copy real source build project and only keep executable
-COPY src/main.rs ./src/main.rs
+COPY huawei-solar-collector/src/main.rs ./src/main.rs
 RUN find ./src -exec touch {} +
 RUN cargo build --release
 
