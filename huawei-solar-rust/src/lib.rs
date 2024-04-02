@@ -141,7 +141,7 @@ pub mod registers {
         STR(String),
     }
 
-    pub struct RegValue<'a, 'b : 'a> {
+    pub struct RegValue<'a, 'b: 'a> {
         pub reg: &'a Register<'b>,
         pub val: Value,
     }
@@ -163,9 +163,46 @@ pub mod registers {
         pub fn to_string(self) -> Result<String, RegisterError> {
             match self.val {
                 Value::STR(v) => Ok(v),
-                _ => Err(RegisterError::ValueConversion(
-                    "Cannot convert bit field to float".to_string(),
-                )),
+                default => Err(RegisterError::ValueConversion(format!(
+                    "Cannot convert {:?} to String",
+                    default
+                ))),
+            }
+        }
+        pub fn to_i32(&self) -> Result<i32, RegisterError> {
+            match &self.val {
+                Value::I32(v) => Ok(*v),
+                default => Err(RegisterError::ValueConversion(format!(
+                    "Cannot convert {:?} to i32",
+                    default
+                ))),
+            }
+        }
+        pub fn to_u32(&self) -> Result<u32, RegisterError> {
+            match &self.val {
+                Value::U32(v) => Ok(*v),
+                default => Err(RegisterError::ValueConversion(format!(
+                    "Cannot convert {:?} to u32",
+                    default
+                ))),
+            }
+        }
+        pub fn to_u16(&self) -> Result<u16, RegisterError> {
+            match &self.val {
+                Value::U16(v) => Ok(*v),
+                default => Err(RegisterError::ValueConversion(format!(
+                    "Cannot convert {:?} to u16",
+                    default
+                ))),
+            }
+        }
+        pub fn to_i16(&self) -> Result<i16, RegisterError> {
+            match &self.val {
+                Value::I16(v) => Ok(*v),
+                default => Err(RegisterError::ValueConversion(format!(
+                    "Cannot convert {:?} to i16",
+                    default
+                ))),
             }
         }
     }
@@ -185,12 +222,14 @@ pub mod registers {
         }
     }
 
+    #[derive(Debug)]
     pub enum Access {
         RO,
         WO,
         RW,
     }
 
+    #[derive(Debug)]
     pub struct Register<'a /* , T: RegisterType */> {
         pub address: u16,
         pub quantity: u8,
@@ -495,7 +534,7 @@ impl Inverter {
         &mut self,
         regs: &'a [registers::Register<'b>],
         // fun: fn(&registers::Register, registers::RegValue),
-    ) -> Result<Vec<registers::RegValue::<'a,'b>>, modbus::Error> {
+    ) -> Result<Vec<registers::RegValue<'a, 'b>>, modbus::Error> {
         let values = Inverter::read_batch_raw(self, regs)?;
 
         values

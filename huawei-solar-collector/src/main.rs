@@ -38,14 +38,6 @@
 // }
 
 // #[derive(Deserialize, Debug)]
-// struct Table {
-//     table: String,
-//     #[serde(deserialize_with = "schedule")]
-//     cron: Schedule,
-//     values: Vec<Register>,
-// }
-
-// #[derive(Deserialize, Debug)]
 // struct Register {
 //     name: String,
 //     address: u16,
@@ -231,12 +223,20 @@
 // }
 
 use std::{
-    env, thread::sleep, time::{Duration, Instant}
+    env,
+    thread::sleep,
+    time::{Duration, Instant},
 };
 
 use chrono::DateTime;
 use huawei_solar::registers::*;
 use postgres::NoTls;
+
+#[derive(Debug)]
+struct DbTable<'a> {
+    name: String,
+    values: Vec<(&'a str, Register<'a>)>,
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ip = "192.168.200.1";
@@ -274,6 +274,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         MAXIMUM_APPARENT_POWER_FROM_GRID,
     ];
     let info_vals = inverter.read_batch(&info_regs)?;
+    let strings = info_vals[4].to_u16()?;
 
     sleep(Duration::from_millis(1000));
 
@@ -334,34 +335,108 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\tStorage:");
     if let Value::U16(val) = storage_info_vals[0].val {
-        println!("\t\tStatus: {}", storage::running_status_to_string(val).unwrap_or("invalid"));
+        println!(
+            "\t\tStatus: {}",
+            storage::running_status_to_string(val).unwrap_or("invalid")
+        );
     }
     println!("\t\tcharge/discharge: {}", &storage_info_vals[1]);
     println!("\t\tcharge capacity    (today): {}", &storage_info_vals[2]);
     println!("\t\tdischarge capacity (today): {}", &storage_info_vals[3]);
 
-
     println!();
     println!("Connecting to Timescale database");
 
-    let db_timeout = 
-    // connect_database(retries: u8, delay: Duration) -> Result<postgres::Client, Box<dyn std::error::Error>> {
-            match postgres::Client::connect(&format!("host={} user={} password={} dbname={} connect_timeout=10",
-                env::var("DB_HOST")?, env::var("DB_USER")?,
-                env::var("DB_PASS")?, env::var("DB_NAME")?), NoTls) {
-                Err(e) => {
-                    if retries > 0 {
-                        sleep(delay);
-                        connect_database(retries - 1, delay)
-                    } else {
-                        Err(Box::new(e))
-                    }
-                }
-                Ok(client) => Ok(client),
-            }
-        // }
+    let db_timeout = 10;
+    let mut db_client = postgres::Client::connect(
+        &format!(
+            "host={} user={} password={} dbname={} connect_timeout={}",
+            env::var("DB_HOST")?,
+            env::var("DB_USER")?,
+            env::var("DB_PASS")?,
+            env::var("DB_NAME")?,
+            db_timeout
+        ),
+        NoTls,
+    )?;
 
-    let mut db_client = connect_database(5, cfg.db_timeout)?;
+    let mut tables = vec![
+        DbTable {
+            name: String::from("general"),
+            values: [
+                INPUT_POWER,
+                LINE_VOLTAGE_A_B,
+                LINE_VOLTAGE_B_C,
+                LINE_VOLTAGE_C_A,
+                PHASE_CURRENT_A,
+                PHASE_CURRENT_B,
+                PHASE_CURRENT_C,
+                PHASE_VOLTAGE_A,
+                PHASE_VOLTAGE_B,
+                PHASE_VOLTAGE_C,
+                ACTIVE_POWER,
+                REACTIVE_POWER,
+                RATED_POWER,
+                ACC_ENERGY_YIELD,
+                ENERGY_YIELD_DAY,
+            ]
+            .into_iter()
+            .map(|reg| (reg.name, reg))
+            .collect(),
+        },
+        DbTable {
+            name: String::from("monitoring"),
+            values: [EFFICIENCY, INTERNAL_TEMPERATURE]
+                .into_iter()
+                .map(|reg| (reg.name, reg))
+                .collect(),
+        },
+        DbTable {
+            name: String::from("storage"),
+            values: [
+                storage::CHARGE_DISCHARGE_POWER,
+                storage::CHARGE_CAPACITY_DAY,
+                storage::DISCHARGE_CAPACITY_DAY,
+            ]
+            .into_iter()
+            .map(|reg| (reg.name, reg))
+            .collect(),
+        },
+    ];
+
+    let plant_regs = [
+        (PV1_VOLTAGE, PV1_CURRENT),
+        (PV2_VOLTAGE, PV2_CURRENT),
+        (PV3_VOLTAGE, PV3_CURRENT),
+        (PV4_VOLTAGE, PV4_CURRENT),
+    ];
+
+    plant_regs
+        .into_iter()
+        .zip(0..strings)
+        .for_each(|((volt, curr), i)| {
+            tables.push(DbTable {
+                name: format!("plant_{}", i + 1),
+                values: vec![("voltage", volt), ("current", curr)],
+            })
+        });
+
+    let mut create_queries = Vec::new();
+    for table in tables {
+        create_queries.push(format!(
+            "CREATE TABLE IF NOT EXISTS {} ({})",
+            &table.name,
+            &table
+                .values
+                .iter()
+                .map(|r| format!("{} real", r.0))
+                .fold(String::from("time timestamptz NOT NULL"), |accu, elem| accu
+                    + ","
+                    + &elem)
+        ));
+    };
+
+    db_client.batch_execute(&create_queries.join(";"))?;
 
     for _ in 0..5 {
         let now = Instant::now();
