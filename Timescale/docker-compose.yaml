@@ -6,12 +6,14 @@ services:
       - 5432:5432 # HTTP UI and API port
     volumes:
       - timescale:/var/lib/postgresql/data
+      - ./setup.sh:/docker-entrypoint-initdb.d/setup.sh
       # - timescale:/home/postgres/pgdata/data
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=adminpass
       - POSTGRES_DB=huawei-solar
       - TIMESCALEDB_TELEMETRY=off
+    # restart:
   superset:
     init: true
     build:
@@ -31,6 +33,14 @@ services:
     volumes:
     - superset:/app/superset_home
     # environment:
+  
+  collector:
+    build: ../huawei-solar-collector/
+    environment:
+      - DB_HOST=timescale
+      - DB_USER=collector
+      - DB_PASS=collector
+      - DB_NAME=huawei-solar
 
   # cubejs:
   #   image: cubejs/cube:v0.31
