@@ -1,5 +1,6 @@
 services:
   timescale:
+    init: true
     image: timescale/timescaledb:latest-pg14
     ports:
       - 5432:5432 # HTTP UI and API port
@@ -12,6 +13,7 @@ services:
       - POSTGRES_DB=huawei-solar
       - TIMESCALEDB_TELEMETRY=off
   superset:
+    init: true
     build:
       context: ./Superset/
       args:
