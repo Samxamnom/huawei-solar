@@ -35,7 +35,7 @@ services:
     # environment:
   
   collector:
-    build: ../huawei-solar-collector/
+    build: ../
     environment:
       - DB_HOST=timescale
       - DB_USER=collector
