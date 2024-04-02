@@ -28,7 +28,7 @@ services:
     volumes:
     - superset:/app/superset_home
     environment:
-    - SUPERSET_SECRET_KEY=your_secret_key_here
+    - SECRET_KEY=qV4ZCA3qMX9f9xbJ1ZR92eY4WfJkvegpsqEfBL5uNIJTViK2Q2Snmj0s
 
   # cubejs:
   #   image: cubejs/cube:v0.31
