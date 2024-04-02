@@ -43,7 +43,7 @@ def get_env_variable(var_name: str, default: Optional[str] = None) -> str:
             )
             raise EnvironmentError(error_msg)
 
-# SECRET_KEY = get_env_variable("SECRET_KEY")
+SECRET_KEY = get_env_variable("SECRET_KEY")
 PUBLIC_ROLE_LIKE = get_env_variable("PUBLIC_ROLE_LIKE", "Admin")
 
 # DATABASE_DIALECT = get_env_variable("DATABASE_DIALECT")
