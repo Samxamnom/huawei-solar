@@ -4,7 +4,8 @@ services:
     ports:
       - 5432:5432 # HTTP UI and API port
     volumes:
-      - db-data:/home/postgres/pgdata/data
+      - timescale:/var/lib/postgresql/data
+      # - timescale:/home/postgres/pgdata/data
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=adminpass
@@ -42,5 +43,5 @@ services:
   #   volumes:
   #     - ./cubejs:/cube/conf
 volumes:
-  db-data:
+  timescale:
   superset:
