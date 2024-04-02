@@ -231,12 +231,12 @@
 // }
 
 use std::{
-    thread::sleep,
-    time::{Duration, Instant},
+    env, thread::sleep, time::{Duration, Instant}
 };
 
 use chrono::DateTime;
 use huawei_solar::registers::*;
+use postgres::NoTls;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ip = "192.168.200.1";
@@ -339,6 +339,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\t\tcharge/discharge: {}", &storage_info_vals[1]);
     println!("\t\tcharge capacity    (today): {}", &storage_info_vals[2]);
     println!("\t\tdischarge capacity (today): {}", &storage_info_vals[3]);
+
+
+    println!();
+    println!("Connecting to Timescale database");
+
+    let db_timeout = 
+    // connect_database(retries: u8, delay: Duration) -> Result<postgres::Client, Box<dyn std::error::Error>> {
+            match postgres::Client::connect(&format!("host={} user={} password={} dbname={} connect_timeout=10",
+                env::var("DB_HOST")?, env::var("DB_USER")?,
+                env::var("DB_PASS")?, env::var("DB_NAME")?), NoTls) {
+                Err(e) => {
+                    if retries > 0 {
+                        sleep(delay);
+                        connect_database(retries - 1, delay)
+                    } else {
+                        Err(Box::new(e))
+                    }
+                }
+                Ok(client) => Ok(client),
+            }
+        // }
+
+    let mut db_client = connect_database(5, cfg.db_timeout)?;
 
     for _ in 0..5 {
         let now = Instant::now();
