@@ -347,7 +347,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
     println!("Connecting to Timescale database");
 
-    let db_timeout = 10;
+    let db_timeout = 200;
     let mut db_client = postgres::Client::connect(
         &format!(
             "host={} user={} password={} dbname={} connect_timeout={}",
