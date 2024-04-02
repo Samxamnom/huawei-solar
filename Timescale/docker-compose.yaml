@@ -10,31 +10,37 @@ services:
       - POSTGRES_PASSWORD=adminpass
       - POSTGRES_DB=huawei-solar
       - TIMESCALEDB_TELEMETRY=off
-  cubejs:
-    image: cubejs/cube:v0.31
+  superset:
+    build:
+      context: ./Superset/
+      args:
+        - DATABASE_DISPLAY_NAME=Huawei Solar
+        - DATABASE_DB=huawei-solar
+        - DATABASE_HOST=timescale
+        - DATABASE_USER=superset
+        - DATABASE_PASSWORD=superset
+        - DATABASE_PORT=5432
+        - DATABASE_DIALECT=postgresql
+
     ports:
-      - 4000:4000
-      - 3000:3000
-    environment:
-      - CUBEJS_DEV_MODE=true
-      - CUBEJS_DB_HOST=timescale
-      - CUBEJS_DB_NAME=huawei-solar
-      - CUBEJS_DB_USER=admin
-      - CUBEJS_DB_PASS=adminpass
-      - CUBEJS_DB_TYPE=postgres
+      - 80:8088
     volumes:
-      - ./cubejs:/cube/conf
-  telegraf:
-    image: telegraf:1.24
-    ports:
-      - 8092:8092
-      - 8094:8094
-    volumes:
-      - ./telegraf.conf:/etc/telegraf/telegraf.conf
-    environment:
-      - DB_USER=admin
-      - DB_PASS=adminpass
-      - DB_NAME=huawei-solar
-      - DB_HOST=timescale
+
+      - DATABASE
+  # cubejs:
+  #   image: cubejs/cube:v0.31
+  #   ports:
+  #     - 4000:4000
+  #     - 3000:3000
+  #   environment:
+  #     - CUBEJS_DEV_MODE=true
+  #     - CUBEJS_DB_HOST=timescale
+  #     - CUBEJS_DB_NAME=huawei-solar
+  #     - CUBEJS_DB_USER=admin
+  #     - CUBEJS_DB_PASS=adminpass
+  #     - CUBEJS_DB_TYPE=postgres
+  #   volumes:
+  #     - ./cubejs:/cube/conf
 volumes:
   db-data:
+  superset:
