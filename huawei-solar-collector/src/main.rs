@@ -334,7 +334,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\tStorage:");
     if let Value::U16(val) = storage_info_vals[0].val {
-        println!("\t\trunning status: {}", device_status_to_string(val).unwrap_or("invalid"));
+        println!("\t\trunning status: {}", storage::running_status_to_string(val).unwrap_or("invalid"));
     }
     println!("\t\tcurrent discharge: {}", &storage_info_vals[1]);
     println!("\t\tcharge capacity    (today): {}", &storage_info_vals[2]);
