@@ -23,12 +23,12 @@ services:
         - DATABASE_PORT=5432
         - DATABASE_DIALECT=postgresql
 
+        - SECRET_KEY=qV4ZCA3qMX9f9xbJ1ZR92eY4WfJkvegpsqEfBL5uNIJTViK2Q2Snmj0s
     ports:
       - 80:8088
     volumes:
     - superset:/app/superset_home
-    environment:
-    - SECRET_KEY=qV4ZCA3qMX9f9xbJ1ZR92eY4WfJkvegpsqEfBL5uNIJTViK2Q2Snmj0s
+    # environment:
 
   # cubejs:
   #   image: cubejs/cube:v0.31
