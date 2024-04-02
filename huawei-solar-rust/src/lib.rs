@@ -173,7 +173,12 @@ pub mod registers {
     impl<'a> Display for RegValue<'a> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match &self.val {
-                Value::U16(_) | Value::U32(_) | Value::I16(_) | Value::I32(_) => write!(f, "{}{}", self.to_float().unwrap(), self.reg.unit.unwrap_or("")),
+                Value::U16(_) | Value::U32(_) | Value::I16(_) | Value::I32(_) => write!(
+                    f,
+                    "{}{}",
+                    self.to_float().unwrap(),
+                    self.reg.unit.unwrap_or("")
+                ),
                 Value::BF(v) => write!(f, "{v:?}"),
                 Value::STR(v) => write!(f, "{v}"),
             }
@@ -253,6 +258,70 @@ pub mod registers {
         pub const EFFICIENCY:                       Register = Register { address: 32086, quantity:  1, gain: 2, unit: Some("%")   , access: Access::RO, typ: Type::U16, name: "EFFICIENCY"                       };
         pub const INTERNAL_TEMPERATURE:             Register = Register { address: 32087, quantity:  1, gain: 1, unit: Some("°C")  , access: Access::RO, typ: Type::I16, name: "INTERNAL_TEMPERATURE"             };
         pub const INSULATION_RESISTANCE:            Register = Register { address: 32088, quantity:  1, gain: 3, unit: Some("MΩ")  , access: Access::RO, typ: Type::U16, name: "INSULATION_RESISTANCE"            };
+
+        pub const DEVICE_STATUS:                    Register = Register { address: 32089, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: Type::U16, name: "DEVICE_STATUS"                    };
+        pub const fn device_status_to_string(status: u16) -> Option<&'static str> {
+            match status {
+                0x0000 => Some("Standby: initializing"),
+                0x0001 => Some("Standby: detecting insulation resistance"),
+                0x0002 => Some("Standby: detecting irradiation"),
+                0x0003 => Some("Standby: drid detecting"),
+                0x0100 => Some("Starting"),
+                0x0200 => Some("On-grid (Off-grid mode: running)"),
+                0x0201 => Some("Grid connection: power limited (Off-grid mode: running: power limited)"),
+                0x0202 => Some("Grid connection: self- derating (Off-grid mode: running: self-derating)"),
+                0x0300 => Some("Shutdown: fault"),
+                0x0301 => Some("Shutdown: command"),
+                0x0302 => Some("Shutdown: OVGR"),
+                0x0303 => Some("Shutdown: communication disconnected"),
+                0x0304 => Some("Shutdown: power limited"),
+                0x0305 => Some("Shutdown: manual startup required"),
+                0x0306 => Some("Shutdown: DC switches disconnected"),
+                0x0307 => Some("Shutdown: rapid cutoff"),
+                0x0308 => Some("Shutdown: input underpower"),
+                0x0401 => Some("Grid scheduling: cosφ-P curve"),
+                0x0402 => Some("Grid scheduling: Q-U curve"),
+                0x0403 => Some("Grid scheduling: PF-U curve"),
+                0x0404 => Some("Grid scheduling: dry contact"),
+                0x0405 => Some("Grid scheduling: Q-P curve"),
+                0x0500 => Some("Spot-check ready"),
+                0x0501 => Some("Spot-checking"),
+                0x0600 => Some("Inspecting"),
+                0x0700 => Some("AFCI self check"),
+                0x0800 => Some("I-V scanning"),
+                0x0900 => Some("DC input detection"),
+                0x0A00 => Some("Running: off-grid charging"),
+                0xA000 => Some("Standby: no irradiation"),
+                _ => None
+            }
+        } 
+        
+            
+
+        pub const FAULT_CODE:                       Register = Register { address: 32090, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: Type::U16, name: "FAULT_CODE"                       };
+        pub const STARTUP_TIME:                     Register = Register { address: 32091, quantity:  2, gain: 0, unit: None        , access: Access::RO, typ: Type::U32, name: "STARTUP_TIME"                     };
+        pub const SHUTDOWN_TIME:                    Register = Register { address: 32093, quantity:  2, gain: 0, unit: None        , access: Access::RO, typ: Type::U32, name: "SHUTDOWN_TIME"                    };
+        pub const ACC_ENERGY_YIELD:                 Register = Register { address: 32106, quantity:  2, gain: 2, unit: Some("kWh") , access: Access::RO, typ: Type::U32, name: "ACC_ENERGY_YIELD"                 };
+        pub const ENERGY_YIELD_DAY:                 Register = Register { address: 32114, quantity:  2, gain: 2, unit: Some("kWh") , access: Access::RO, typ: Type::U32, name: "ENERGY_YIELD_DAY"                 };
+
+        pub mod storage {
+            use crate::registers::{Access, Register, Type};
+
+            pub const RUNNING_STATUS:               Register = Register { address: 37000, quantity:  1, gain: 0, unit: None        , access: Access::RO, typ: Type::U16, name: "RUNNING_STATUS"                   };
+            pub const CHARGE_DISCHARGE_POWER:       Register = Register { address: 37001, quantity:  2, gain: 0, unit: Some("W")   , access: Access::RO, typ: Type::I32, name: "CHARGE_DISCHARGE_POWER"           };
+            pub const CHARGE_CAPACITY_DAY:          Register = Register { address: 37015, quantity:  2, gain: 2, unit: Some("kWh") , access: Access::RO, typ: Type::U32, name: "CHARGE_CAPACITY_DAY"              };
+            pub const DISCHARGE_CAPACITY_DAY:       Register = Register { address: 37017, quantity:  2, gain: 2, unit: Some("kWh") , access: Access::RO, typ: Type::U32, name: "DISCHARGE_CAPACITY_DAY"           };
+            // pub const ACTIVE_POWER:                 Register = Register { address: 37113, quantity:  2, gain: 0, unit: Some("W")   , access: Access::RO, typ: Type::U16, name: "INSULATION_RESISTANCE"            };
+        }
+        // =======================================
+        // ===== START OF READ-WRITE SECTION =====
+        // =======================================
+
+        pub const STARTUP:                          Register = Register { address: 40200, quantity:  1, gain: 0, unit: None        , access: Access::WO, typ: Type::U16, name: "STARTUP"                          };
+        pub const SHUTDOWN:                         Register = Register { address: 40201, quantity:  1, gain: 0, unit: None        , access: Access::WO, typ: Type::U16, name: "SHUTDOWN"                         };
+        pub const GRID_CODE:                        Register = Register { address: 42000, quantity:  1, gain: 0, unit: None        , access: Access::RW, typ: Type::U16, name: "GRID_CODE"                        };
+        
+        pub const TIME_ZONE:                        Register = Register { address: 43006, quantity:  1, gain: 0, unit: Some("min") , access: Access::RW, typ: Type::I16, name: "TIME_ZONE"                        };
 
     }
 }

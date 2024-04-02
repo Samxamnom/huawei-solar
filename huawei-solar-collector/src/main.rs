@@ -232,7 +232,7 @@
 
 use std::{
     thread::sleep,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use huawei_solar::registers::*;
@@ -274,6 +274,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     let info_vals = inverter.read_batch(&info_regs)?;
 
+    sleep(Duration::from_millis(1000))
+
+    let info_regs = vec![
+        EFFICIENCY,
+        INTERNAL_TEMPERATURE,
+        DEVICE_STATUS,
+        STARTUP_TIME,
+        SHUTDOWN_TIME,
+    ];
+    let info_vals2 = inverter.read_batch(&info_regs)?;
+
     println!("\nInverter");
     println!(
         "\tModel: {} (ID: {})",
@@ -285,6 +296,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &info_vals[1],
         &info_vals[2]
     );
+    if let Value::U16(val) = info_vals2[2].val {
+        println!("\tStatus: {}", device_status_to_string(val).unwrap_or("invalid"));
+    }
+    if let Value::U32(val) = info_vals2[3].val {
+        println!("\tStartup: {:?}", chrono::DateTime::from_timestamp(val as i64, 0));
+    }
+    if let Value::U32(val) = info_vals2[4].val {
+        println!("\tShutdown: {:?}", chrono::DateTime::from_timestamp(val as i64, 0));
+    }
     println!("\tStrings: {}", &info_vals[4],);
     println!("\tTrackers: {}", &info_vals[5],);
     println!("\tMaximum:");
@@ -293,6 +313,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\t\treactive power -> grid: {}", &info_vals[9]);
     println!("\t\tapparent power <- grid: {}", &info_vals[10]);
     println!();
+
+    sleep(Duration::from_millis(1000));
+    
+    let storage_info_regs = vec![
+        storage::RUNNING_STATUS,
+        storage::CHARGE_DISCHARGE_POWER,
+        storage::CHARGE_CAPACITY_DAY,
+        storage::DISCHARGE_CAPACITY_DAY,
+    ];
+    let storage_info_vals = inverter.read_batch(&storage_info_regs)?;
+
+    println!("\tStorage: {}", &info_vals[4],);
+    println!("\t\trunning status: {}", &info_vals[7]);
+    println!("\t\tapparent power: {}", &info_vals[8]);
+    println!("\t\treactive power -> grid: {}", &info_vals[9]);
+    println!("\t\tapparent power <- grid: {}", &info_vals[10]);
 
     for _ in 0..5 {
         let now = Instant::now();
