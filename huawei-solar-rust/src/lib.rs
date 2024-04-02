@@ -141,11 +141,11 @@ pub mod registers {
         STR(String),
     }
 
-    pub struct RegValue<'a> {
-        pub reg: &'a Register<'a>,
+    pub struct RegValue<'a, 'b : 'a> {
+        pub reg: &'a Register<'b>,
         pub val: Value,
     }
-    impl<'a> RegValue<'a> {
+    impl<'a, 'b> RegValue<'a, 'b> {
         pub fn to_float(&self) -> Result<f64, RegisterError> {
             match self.val {
                 Value::U16(v) => Ok(v as f64 * 10f64.pow(self.reg.gain)),
@@ -170,7 +170,7 @@ pub mod registers {
         }
     }
 
-    impl<'a> Display for RegValue<'a> {
+    impl<'a, 'b> Display for RegValue<'a, 'b> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match &self.val {
                 Value::U16(_) | Value::U32(_) | Value::I16(_) | Value::I32(_) => write!(
@@ -481,12 +481,13 @@ impl Inverter {
         Ok(chunked)
     }
 
-    pub fn read_batch<'a>(
-        &'a mut self,
-        regs: &'a [registers::Register],
+    pub fn read_batch<'a, 'b>(
+        &mut self,
+        regs: &'a [registers::Register<'b>],
         // fun: fn(&registers::Register, registers::RegValue),
-    ) -> Result<Vec<registers::RegValue>, modbus::Error> {
+    ) -> Result<Vec<registers::RegValue::<'a,'b>>, modbus::Error> {
         let values = Inverter::read_batch_raw(self, regs)?;
+
         values
             .into_iter()
             .zip(regs)

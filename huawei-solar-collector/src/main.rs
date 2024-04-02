@@ -232,7 +232,7 @@
 
 use std::{
     thread::sleep,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant},
 };
 
 use huawei_solar::registers::*;
@@ -274,7 +274,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     let info_vals = inverter.read_batch(&info_regs)?;
 
-    sleep(Duration::from_millis(1000))
+    sleep(Duration::from_millis(1000));
 
     let info_regs = vec![
         EFFICIENCY,
