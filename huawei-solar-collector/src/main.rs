@@ -518,5 +518,5 @@ fn next_aligned_timepoint(alignment: Duration) -> DateTime<Local> {
     let nanos = now.timestamp_nanos_opt().unwrap();
     let align = alignment.as_nanos() as i64;
 
-    DateTime::from_timestamp_nanos(nanos % align + align).with_timezone(&Local)
+    DateTime::from_timestamp_nanos(nanos - (nanos % align) + align).with_timezone(&Local)
 }
