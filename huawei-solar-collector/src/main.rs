@@ -457,7 +457,7 @@ fn create_tables(status: &Status) -> Vec<DbTable<'static>> {
                 PHASE_VOLTAGE_C,
                 ACTIVE_POWER,
                 REACTIVE_POWER,
-                RATED_POWER,
+                // RATED_POWER,
                 ACC_ENERGY_YIELD,
                 ENERGY_YIELD_DAY,
             ]
