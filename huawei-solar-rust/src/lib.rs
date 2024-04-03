@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{thread::sleep, time::Duration};
 
 use modbus::Transport;
 
@@ -558,7 +558,7 @@ impl Inverter {
             Ok(v) => Ok(v),
             Err(e) => {
                 if retries > 0 {
-                    println!("Got error {}", e);
+                    sleep(Duration::from_millis(200));
                     Inverter::read_batch_retry(self, regs, retries - 1)
                 } else {
                     Err(e)
