@@ -229,7 +229,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!();
     println!("Connecting to Timescale database");
-    let mut db_client = connect_database(12, Duration::from_secs(5))?;
+    // let mut db_client = connect_database(12, Duration::from_secs(5))?;
     println!("Connected!");
 
     let mut tables = create_tables(&status);
@@ -251,7 +251,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             )
         })
         .collect::<Vec<String>>();
-    db_client.batch_execute(&create_queries.join(";"))?;
+    // db_client.batch_execute(&create_queries.join(";"))?;
     println!("Creation done");
 
     println!("Collecting Data");
@@ -268,21 +268,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|v| &v.1)
                     .collect::<Vec<&Register<'static>>>();
                 let values = inverter.read_batch_retry(&regs, 10)?;
-                db_client.execute(
-                    &format!(
-                        "INSERT INTO {} ({}) VALUES ({})",
-                        t.name,
-                        t.values
-                            .iter()
-                            .fold(String::from("time"), |accu, ele| accu + "," + ele.0),
-                        values
-                            .iter()
-                            .fold(format!("'{}'", Local::now().to_string()), |accu, ele| accu
-                                + ","
-                                + &ele.to_float().unwrap().to_string())
-                    ),
-                    &[],
-                )?;
+                // db_client.execute(
+                //     &format!(
+                //         "INSERT INTO {} ({}) VALUES ({})",
+                //         t.name,
+                //         t.values
+                //             .iter()
+                //             .fold(String::from("time"), |accu, ele| accu + "," + ele.0),
+                //         values
+                //             .iter()
+                //             .fold(format!("'{}'", Local::now().to_string()), |accu, ele| accu
+                //                 + ","
+                //                 + &ele.to_float().unwrap().to_string())
+                //     ),
+                //     &[],
+                // )?;
                 t.next_read = next_aligned_timepoint(t.alignment);
                 println!("next read: {}", t.next_read);
 

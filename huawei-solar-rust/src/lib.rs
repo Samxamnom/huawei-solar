@@ -558,6 +558,7 @@ impl Inverter {
             Ok(v) => Ok(v),
             Err(e) => {
                 if retries > 0 {
+                    println!("Got error {}", e);
                     Inverter::read_batch_retry(self, regs, retries - 1)
                 } else {
                     Err(e)
