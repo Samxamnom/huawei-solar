@@ -332,9 +332,9 @@ fn connect_database(
 }
 
 fn connect_inverter() -> Result<Inverter, Box<dyn std::error::Error>> {
-    let ip = env::var("DB_ADDR")?;
-    let port = env::var("DB_PORT")?.parse::<u16>()?;
-    let mb_id = env::var("DB_MBID")?.parse::<u8>()?;
+    let ip = env::var("INV_ADDR")?;
+    let port = env::var("INV_PORT")?.parse::<u16>()?;
+    let mb_id = env::var("INV_MBID")?.parse::<u8>()?;
 
     println!("\tIP: {}", ip);
     println!("\tport: {}", port);

@@ -41,6 +41,9 @@ services:
       - DB_USER=collector
       - DB_PASS=collector
       - DB_NAME=huawei-solar
+      - INV_ADDR=192.168.200.1
+      - INV_PORT=6607
+      - INV_MBID=0
 
   # cubejs:
   #   image: cubejs/cube:v0.31
