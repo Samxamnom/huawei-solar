@@ -46,20 +46,21 @@ services:
       - INV_MBID=0
     restart: on-failure
 
-  # cubejs:
-  #   image: cubejs/cube:v0.31
-  #   ports:
-  #     - 4000:4000
-  #     - 3000:3000
-  #   environment:
-  #     - CUBEJS_DEV_MODE=true
-  #     - CUBEJS_DB_HOST=timescale
-  #     - CUBEJS_DB_NAME=huawei-solar
-  #     - CUBEJS_DB_USER=admin
-  #     - CUBEJS_DB_PASS=adminpass
-  #     - CUBEJS_DB_TYPE=postgres
-  #   volumes:
-  #     - ./cubejs:/cube/conf
+  cubejs:
+    image: cubejs/cube:v0.35
+    ports:
+      - 4000:4000
+      - 3000:3000
+    environment:
+      - CUBEJS_DEV_MODE=true
+      - CUBEJS_DB_HOST=timescale
+      - CUBEJS_DB_NAME=huawei-solar
+      - CUBEJS_DB_USER=admin
+      - CUBEJS_DB_PASS=adminpass
+      - CUBEJS_DB_TYPE=postgres
+    volumes:
+      - cubejs:/cube/conf
 volumes:
   timescale:
   superset:
+  cubejs:
