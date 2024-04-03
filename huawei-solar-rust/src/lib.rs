@@ -6,6 +6,7 @@ use modbus::Transport;
 
 pub mod registers {
     use std::fmt::Display;
+    use num::pow::Pow;
 
     use bit_vec::BitVec;
     use thiserror::Error;
@@ -242,7 +243,6 @@ pub mod registers {
     }
 
     pub use nofmt::*;
-    use num::pow::Pow;
     #[rustfmt::skip]
     mod nofmt {
         // use bit_vec::BitVec;
