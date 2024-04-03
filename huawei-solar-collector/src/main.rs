@@ -346,9 +346,9 @@ fn connect_inverter() -> Result<Inverter, Box<dyn std::error::Error>> {
         Some(&ip),
         Some(port),
         Some(mb_id),
-        Some(Duration::from_millis(200)),
-        Some(Duration::from_millis(200)),
-        Some(Duration::from_millis(200)),
+        Some(Duration::from_millis(500)),
+        Some(Duration::from_millis(500)),
+        Some(Duration::from_millis(500)),
     )?)
 }
 
