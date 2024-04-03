@@ -7,6 +7,5 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.37"
-cron = "0.12.1"
 huawei_solar = { path = "../huawei-solar-rust"}
 postgres = "0.19.7"

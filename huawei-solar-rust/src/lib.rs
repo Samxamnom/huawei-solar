@@ -511,6 +511,7 @@ impl Inverter {
             .map(|r| r.address + r.quantity as u16)
             .max()
             .unwrap();
+        print!("min max {} {}", min, max);
 
         let values = match self.client {
             Client::TCP(ref mut tcp_client) => {
