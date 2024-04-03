@@ -2,8 +2,6 @@ use std::time::Duration;
 
 use modbus::Transport;
 
-// use registers::RegisterType;
-
 pub mod registers {
     use std::fmt::Display;
     use num::pow::Pow;
@@ -511,7 +509,6 @@ impl Inverter {
             .map(|r| r.address + r.quantity as u16)
             .max()
             .unwrap();
-        print!("min max {} {}", min, max);
 
         let values = match self.client {
             Client::TCP(ref mut tcp_client) => {
@@ -574,138 +571,4 @@ impl Inverter {
             Client::TCP(ref mut tcp_client) => modbus::Transport::close(tcp_client),
         }
     }
-    // match mb_client.read_holding_registers(start_address, end_address - start_address) {
-    //     Ok(res) => {
-    //         println!(
-    //             "Read regs({}..{}): {:?}",
-    //             start_address,
-    //             end_address - start_address,
-    //             res
-    //         );
-    //         for i in 0..res.len() {
-    //             values.insert(start_address + i as u16, res[i]);
-    //         }
-    //     }
-    //     Err(err) => {
-    //         eprintln!("Modbus error: {}", err.to_string());
-    //         continue 'out;
-    //     }
-    // }
-
-    //     let mut last_read = DateTime::<Utc>::MIN_UTC;
-    //     'out: loop {
-    //         // find next query job and time of it
-    //         let mut next_job = DateTime::<Utc>::MAX_UTC;
-    //         let mut tables = vec![];
-    //         for table in &cfg.queries {
-    //             let table_time = *table
-    //                 .cron
-    //                 .upcoming(Utc)
-    //                 .next()
-    //                 .get_or_insert(DateTime::<Utc>::MAX_UTC);
-    //             if next_job > table_time {
-    //                 next_job = table_time;
-    //                 tables.clear();
-    //             }
-    //             if table_time == next_job {
-    //                 tables.push(table);
-    //             }
-    //         }
-    //         // sleep until next invoke
-    //         sleep((next_job - Utc::now()).to_std().unwrap_or(Duration::ZERO));
-
-    //         // query modbus slave
-    //         let mut regs = vec![];
-    //         tables.iter_mut().for_each(|q| regs.extend(&q.values));
-    //         regs.sort_by_key(|a| a.address);
-
-    //         let mut values = HashMap::new();
-    //         // group registers to single request
-    //         while !regs.is_empty() {
-    //             let reg = regs.remove(0);
-    //             let start_address = reg.address;
-    //             let mut end_address = start_address + reg.data_type.size();
-
-    //             while !regs.is_empty() {
-    //                 let reg = regs[0];
-    //                 if reg.address == end_address {
-    //                     end_address += reg.data_type.size();
-    //                     regs.remove(0);
-    //                 } else {
-    //                     break;
-    //                 }
-    //             }
-
-    //             // request whole group
-    //             println!(
-    //                 "since last read: {}, sleeping: {:?}",
-    //                 Utc::now() - last_read,
-    //                 (chrono::Duration::from_std(Duration::from_millis(500))?
-    //                     - (Utc::now() - last_read))
-    //                     .to_std()
-    //                     .unwrap_or(Duration::ZERO)
-    //             );
-    //             sleep(
-    //                 (chrono::Duration::from_std(Duration::from_millis(500))?
-    //                     - (Utc::now() - last_read))
-    //                     .to_std()
-    //                     .unwrap_or(Duration::ZERO),
-    //             );
-    //             last_read = Utc::now();
-    //             match mb_client.read_holding_registers(start_address, end_address - start_address) {
-    //                 Ok(res) => {
-    //                     println!(
-    //                         "Read regs({}..{}): {:?}",
-    //                         start_address,
-    //                         end_address - start_address,
-    //                         res
-    //                     );
-    //                     for i in 0..res.len() {
-    //                         values.insert(start_address + i as u16, res[i]);
-    //                     }
-    //                 }
-    //                 Err(err) => {
-    //                     eprintln!("Modbus error: {}", err.to_string());
-    //                     continue 'out;
-    //                 }
-    //             }
-    //         }
-
-    //         // convert and write to db
-    //         /* type.convert((r.address..r.address + r.data_type.size()).map(|addr| *values.get(&addr).unwrap()).collect(), r.scale)*/
-    //         for table in tables {
-    //             // params.extend(table.values.iter().map(|r| r.data_type.convert((r.address..r.address+r.data_type.size()).map(|addr| *values.get(&addr).unwrap()), r.scale) /*as (dyn ToSql + Sync)*/));
-    //             match db_client.execute(
-    //                 &format!(
-    //                     "INSERT INTO {} ({}) VALUES ({})",
-    //                     &table.table,
-    //                     table
-    //                         .values
-    //                         .iter()
-    //                         .map(|elem| &elem.name)
-    //                         .fold(String::from("time"), |accu, ele| accu + "," + ele),
-    //                     table
-    //                         .values
-    //                         .iter()
-    //                         .map(|r| r.data_type.convert(
-    //                             (r.address..r.address + r.data_type.size())
-    //                                 .map(|addr| *values.get(&addr).unwrap())
-    //                                 .collect(),
-    //                             r.scale
-    //                         ))
-    //                         .fold(
-    //                             format!("'{}'", next_job.with_timezone(&Local).to_string()),
-    //                             |accu, ele| accu + "," + &ele.to_string()
-    //                         ) // (2..table.values.len() + 2).fold(String::from("$1"), |accu, ele| accu + ", $" + &ele.to_string())
-    //                 ),
-    //                 // &vec![&5f32 as &(dyn ToSql + Sync)][..]
-    //                 // &table.values.iter().map(|r| &(values.get(&r.address).unwrap_or(&0u16) as &f32) as &(dyn ToSql + Sync)).collect::<Vec<&(dyn ToSql + Sync)>>()[..],
-    //                 &[],
-    //             ) {
-    //                 Ok(_) => {}
-    //                 Err(err) => eprintln!("Database error: {}", err.to_string()),
-    //             }
-    //         }
-    //     }
-    // }
 }
