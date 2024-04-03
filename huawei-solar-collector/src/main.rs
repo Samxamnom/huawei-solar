@@ -260,34 +260,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         tables
             .iter_mut()
             .filter(|t| t.next_read < now)
-            .try_for_each(|t| -> Result<(), Box<dyn std::error::Error>> {
+            .for_each(|t| {
                 // read table
                 let regs = t
                     .values
                     .iter()
                     .map(|v| &v.1)
                     .collect::<Vec<&Register<'static>>>();
-                let values = inverter.read_batch_retry(&regs, 10)?;
-                db_client.execute(
-                    &format!(
-                        "INSERT INTO {} ({}) VALUES ({})",
-                        t.name,
-                        t.values
-                            .iter()
-                            .fold(String::from("time"), |accu, ele| accu + "," + ele.0),
-                        values
-                            .iter()
-                            .fold(format!("'{}'", Local::now().to_string()), |accu, ele| accu
-                                + ","
-                                + &ele.to_float().unwrap().to_string())
-                    ),
-                    &[],
-                )?;
+
+                if let Ok(values) = inverter.read_batch_retry(&regs, 10) {
+                    db_client.execute(
+                        &format!(
+                            "INSERT INTO {} ({}) VALUES ({})",
+                            t.name,
+                            t.values
+                                .iter()
+                                .fold(String::from("time"), |accu, ele| accu + "," + ele.0),
+                            values
+                                .iter()
+                                .fold(format!("'{}'", Local::now().to_string()), |accu, ele| accu
+                                    + ","
+                                    + &ele.to_float().unwrap().to_string())
+                        ),
+                        &[],
+                    ).ok();
+                }
                 t.next_read = next_aligned_timepoint(t.alignment);
                 println!("next read: {}", t.next_read);
-
-                Ok(())
-            })?;
+            });
 
         let next_req = tables.iter().map(|t| t.next_read).min();
         if let None = next_req {
