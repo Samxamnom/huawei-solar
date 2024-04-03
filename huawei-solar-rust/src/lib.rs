@@ -556,13 +556,12 @@ impl Inverter {
         &mut self,
         regs: &'a [&registers::Register<'b>],
         retries: u8,
-        timeout: Duration
     ) -> Result<Vec<registers::RegValue<'a, 'b>>, modbus::Error> {
         match Inverter::read_batch(self, regs) {
             Ok(v) => Ok(v),
             Err(e) => {
                 if retries > 0 {
-                    Inverter::read_batch_retry(self, regs, retries - 1, timeout)
+                    Inverter::read_batch_retry(self, regs, retries - 1)
                 } else {
                     Err(e)
                 }

@@ -267,7 +267,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .iter()
                     .map(|v| &v.1)
                     .collect::<Vec<&Register<'static>>>();
-                let values = inverter.read_batch_retry(&regs, 10, Duration::from_millis(200))?;
+                let values = inverter.read_batch_retry(&regs, 10)?;
                 db_client.execute(
                     &format!(
                         "INSERT INTO {} ({}) VALUES ({})",
@@ -284,6 +284,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     &[],
                 )?;
                 t.next_read = next_aligned_timepoint(t.alignment);
+                println!("next read: {}", t.next_read);
 
                 Ok(())
             })?;
@@ -294,6 +295,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         let sleep_time = (next_req.unwrap() - Local::now()).to_std();
         if let Ok(dur) = sleep_time {
+            println!("sleep time: {:?}", dur);
             sleep(dur);
         }
     }
@@ -344,9 +346,9 @@ fn connect_inverter() -> Result<Inverter, Box<dyn std::error::Error>> {
         Some(&ip),
         Some(port),
         Some(mb_id),
-        Some(Duration::from_secs(5)),
-        Some(Duration::from_secs(5)),
-        Some(Duration::from_secs(5)),
+        Some(Duration::from_millis(200)),
+        Some(Duration::from_millis(200)),
+        Some(Duration::from_millis(200)),
     )?)
 }
 
@@ -368,7 +370,7 @@ fn get_status(inverter: &mut Inverter) -> Result<Status, Box<dyn std::error::Err
         &MAXIMUM_REACTIVE_POWER_TO_GRID,
         &MAXIMUM_APPARENT_POWER_FROM_GRID,
     ];
-    let info_vals = inverter.read_batch_retry(&info_regs, 10, Duration::from_millis(200))?;
+    let info_vals = inverter.read_batch_retry(&info_regs, 10)?;
     let strings = info_vals[4].to_u16()?;
 
     let info_regs = vec![
@@ -378,7 +380,7 @@ fn get_status(inverter: &mut Inverter) -> Result<Status, Box<dyn std::error::Err
         &STARTUP_TIME,
         &SHUTDOWN_TIME,
     ];
-    let info_vals2 = inverter.read_batch_retry(&info_regs, 10, Duration::from_millis(200))?;
+    let info_vals2 = inverter.read_batch_retry(&info_regs, 10)?;
 
     println!("\nInverter");
     println!("\tModel: {} (ID: {})", &info_vals[0], &info_vals[3]);
@@ -422,8 +424,7 @@ fn get_status(inverter: &mut Inverter) -> Result<Status, Box<dyn std::error::Err
         &storage::CHARGE_CAPACITY_DAY,
         &storage::DISCHARGE_CAPACITY_DAY,
     ];
-    let storage_info_vals =
-        inverter.read_batch_retry(&storage_info_regs, 10, Duration::from_millis(200))?;
+    let storage_info_vals = inverter.read_batch_retry(&storage_info_regs, 10)?;
 
     println!("\tStorage:");
     if let Value::U16(val) = storage_info_vals[0].val {
