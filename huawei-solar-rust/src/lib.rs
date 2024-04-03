@@ -499,7 +499,7 @@ impl Inverter {
 
     pub fn read_batch_raw(
         &mut self,
-        regs: &[registers::Register],
+        regs: &[&registers::Register],
     ) -> Result<Vec<Vec<u16>>, modbus::Error> {
         if regs.is_empty() {
             return Ok(Vec::new());
@@ -532,7 +532,7 @@ impl Inverter {
 
     pub fn read_batch<'a, 'b>(
         &mut self,
-        regs: &'a [registers::Register<'b>],
+        regs: &'a [&registers::Register<'b>],
         // fun: fn(&registers::Register, registers::RegValue),
     ) -> Result<Vec<registers::RegValue<'a, 'b>>, modbus::Error> {
         let values = Inverter::read_batch_raw(self, regs)?;
@@ -550,6 +550,23 @@ impl Inverter {
                 })
             })
             .collect()
+    }
+    pub fn read_batch_retry<'a, 'b>(
+        &mut self,
+        regs: &'a [&registers::Register<'b>],
+        retries: u8,
+        timeout: Duration
+    ) -> Result<Vec<registers::RegValue<'a, 'b>>, modbus::Error> {
+        match Inverter::read_batch(self, regs) {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                if retries > 0 {
+                    Inverter::read_batch_retry(self, regs, retries - 1, timeout)
+                } else {
+                    Err(e)
+                }
+            }
+        }
     }
 
     pub fn disconnect(&mut self) -> Result<(), modbus::Error> {

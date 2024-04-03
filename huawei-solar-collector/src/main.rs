@@ -206,243 +206,103 @@
 //     }
 // }
 
-use std::{
-    env,
-    thread::sleep,
-    time::{Duration, Instant},
-};
+use std::{env, thread::sleep, time::Duration};
 
-use chrono::DateTime;
-use huawei_solar::registers::*;
+use chrono::{DateTime, Local, TimeZone};
+use huawei_solar::{registers::*, Inverter};
 use postgres::NoTls;
 
 #[derive(Debug)]
 struct DbTable<'a> {
     name: String,
     values: Vec<(&'a str, Register<'a>)>,
+    alignment: Duration,
+    next_read: DateTime<Local>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let ip = "192.168.200.1";
-    let port = 6607;
-    let modbus_uid = 0;
-
     println!("Connecting to Inverter over TCP");
-    println!("\tIP: {}", ip);
-    println!("\tport: {}", port);
-    println!("\tmodbus id: {}", modbus_uid);
-
-    let mut inverter = huawei_solar::Inverter::connect_tcp(
-        Some(ip),
-        Some(port),
-        Some(modbus_uid),
-        Some(Duration::from_secs(5)),
-        Some(Duration::from_secs(5)),
-        Some(Duration::from_secs(5)),
-    )?;
+    let mut inverter = connect_inverter()?;
     println!("Connected!");
 
-    sleep(Duration::from_millis(2000));
-
-    let info_regs = vec![
-        MODEL,
-        SN,
-        PN,
-        MODEL_ID,
-        NUMBER_OF_PV_STRINGS,
-        NUMBER_OF_MPP_TRACKERS,
-        RATED_POWER,
-        MAXIMUM_ACTIVE_POWER,
-        MAXIMUM_APPARENT_POWER,
-        MAXIMUM_REACTIVE_POWER_TO_GRID,
-        MAXIMUM_APPARENT_POWER_FROM_GRID,
-    ];
-    let info_vals = inverter.read_batch(&info_regs)?;
-    let strings = info_vals[4].to_u16()?;
-
-    sleep(Duration::from_millis(1000));
-
-    let info_regs = vec![
-        EFFICIENCY,
-        INTERNAL_TEMPERATURE,
-        DEVICE_STATUS,
-        STARTUP_TIME,
-        SHUTDOWN_TIME,
-    ];
-    let info_vals2 = inverter.read_batch(&info_regs)?;
-
-    println!("\nInverter");
-    println!("\tModel: {} (ID: {})", &info_vals[0], &info_vals[3]);
-    println!("\tSN/PN: {}/{}", &info_vals[1], &info_vals[2]);
-    if let Value::U16(val) = info_vals2[2].val {
-        println!(
-            "\tStatus: {}",
-            device_status_to_string(val).unwrap_or("invalid")
-        );
-    }
-    if let Value::U32(val) = info_vals2[3].val {
-        println!(
-            "\tStartup: {:?}",
-            DateTime::from_timestamp(val as i64, 0)
-                .map(|t| t.format("%Y-%m-%d %H:%M:%S").to_string())
-                .unwrap_or("invalid".to_string())
-        );
-    }
-    if let Value::U32(val) = info_vals2[4].val {
-        if val != u32::MAX {
-            println!(
-                "\tShutdown: {:?}",
-                DateTime::from_timestamp(val as i64, 0)
-                    .map(|t| t.format("%Y-%m-%d %H:%M:%S").to_string())
-                    .unwrap_or("invalid".to_string())
-            );
-        }
-    }
-    println!("\tStrings: {}", &info_vals[4],);
-    println!("\tTrackers: {}", &info_vals[5],);
-    println!("\tMaximum:");
-    println!("\t\tactive power  : {}", &info_vals[7]);
-    println!("\t\tapparent power: {}", &info_vals[8]);
-    println!("\t\treactive power -> grid: {}", &info_vals[9]);
-    println!("\t\tapparent power <- grid: {}", &info_vals[10]);
-    println!();
-
-    sleep(Duration::from_millis(1000));
-
-    let storage_info_regs = vec![
-        storage::RUNNING_STATUS,
-        storage::CHARGE_DISCHARGE_POWER,
-        storage::CHARGE_CAPACITY_DAY,
-        storage::DISCHARGE_CAPACITY_DAY,
-    ];
-    let storage_info_vals = inverter.read_batch(&storage_info_regs)?;
-
-    println!("\tStorage:");
-    if let Value::U16(val) = storage_info_vals[0].val {
-        println!(
-            "\t\tStatus: {}",
-            storage::running_status_to_string(val).unwrap_or("invalid")
-        );
-    }
-    println!("\t\tcharge/discharge: {}", &storage_info_vals[1]);
-    println!("\t\tcharge capacity    (today): {}", &storage_info_vals[2]);
-    println!("\t\tdischarge capacity (today): {}", &storage_info_vals[3]);
+    let status = get_status(&mut inverter)?;
 
     println!();
     println!("Connecting to Timescale database");
     let mut db_client = connect_database(12, Duration::from_secs(5))?;
     println!("Connected!");
 
-    let mut tables = vec![
-        DbTable {
-            name: String::from("general"),
-            values: [
-                INPUT_POWER,
-                LINE_VOLTAGE_A_B,
-                LINE_VOLTAGE_B_C,
-                LINE_VOLTAGE_C_A,
-                PHASE_CURRENT_A,
-                PHASE_CURRENT_B,
-                PHASE_CURRENT_C,
-                PHASE_VOLTAGE_A,
-                PHASE_VOLTAGE_B,
-                PHASE_VOLTAGE_C,
-                ACTIVE_POWER,
-                REACTIVE_POWER,
-                RATED_POWER,
-                ACC_ENERGY_YIELD,
-                ENERGY_YIELD_DAY,
-            ]
-            .into_iter()
-            .map(|reg| (reg.name, reg))
-            .collect(),
-        },
-        DbTable {
-            name: String::from("monitoring"),
-            values: [EFFICIENCY, INTERNAL_TEMPERATURE]
-                .into_iter()
-                .map(|reg| (reg.name, reg))
-                .collect(),
-        },
-        DbTable {
-            name: String::from("storage"),
-            values: [
-                storage::CHARGE_DISCHARGE_POWER,
-                storage::CHARGE_CAPACITY_DAY,
-                storage::DISCHARGE_CAPACITY_DAY,
-            ]
-            .into_iter()
-            .map(|reg| (reg.name, reg))
-            .collect(),
-        },
-    ];
+    let mut tables = create_tables(&status);
 
-    let plant_regs = [
-        (PV1_VOLTAGE, PV1_CURRENT),
-        (PV2_VOLTAGE, PV2_CURRENT),
-        (PV3_VOLTAGE, PV3_CURRENT),
-        (PV4_VOLTAGE, PV4_CURRENT),
-    ];
-
-    plant_regs
-        .into_iter()
-        .zip(0..strings)
-        .for_each(|((volt, curr), i)| {
-            tables.push(DbTable {
-                name: format!("plant_{}", i + 1),
-                values: vec![("voltage", volt), ("current", curr)],
-            })
-        });
-
-    let mut create_queries = Vec::new();
-    for table in tables {
-        create_queries.push(format!(
-            "CREATE TABLE IF NOT EXISTS {} ({})",
-            &table.name,
-            &table
-                .values
-                .iter()
-                .map(|r| format!("{} real", r.0))
-                .fold(String::from("time timestamptz NOT NULL"), |accu, elem| accu
-                    + ","
-                    + &elem)
-        ));
-    }
-
+    println!("Creating DB tables");
+    let create_queries = tables
+        .iter()
+        .map(|table| {
+            format!(
+                "CREATE TABLE IF NOT EXISTS {} ({})",
+                &table.name,
+                &table
+                    .values
+                    .iter()
+                    .map(|r| format!("{} real", r.0))
+                    .fold(String::from("time timestamptz NOT NULL"), |accu, elem| accu
+                        + ","
+                        + &elem)
+            )
+        })
+        .collect::<Vec<String>>();
     db_client.batch_execute(&create_queries.join(";"))?;
+    println!("Creation done");
 
-    for _ in 0..5 {
-        let now = Instant::now();
-        let active_pow = inverter.read_raw(ACTIVE_POWER)?;
-        let time = now.elapsed();
-        println!("active power {:?} time {:?}", active_pow, time);
+    println!("Collecting Data");
+    loop {
+        let now = Local::now();
+        tables
+            .iter_mut()
+            .filter(|t| t.next_read < now)
+            .try_for_each(|t| -> Result<(), Box<dyn std::error::Error>> {
+                // read table
+                let regs = t
+                    .values
+                    .iter()
+                    .map(|v| &v.1)
+                    .collect::<Vec<&Register<'static>>>();
+                let values = inverter.read_batch_retry(&regs, 10, Duration::from_millis(200))?;
+                db_client.execute(
+                    &format!(
+                        "INSERT INTO {} ({}) VALUES ({})",
+                        t.name,
+                        t.values
+                            .iter()
+                            .fold(String::from("time"), |accu, ele| accu + "," + ele.0),
+                        values
+                            .iter()
+                            .fold(format!("'{}'", Local::now().to_string()), |accu, ele| accu
+                                + ","
+                                + &ele.to_float().unwrap().to_string())
+                    ),
+                    &[],
+                )?;
+                t.next_read = next_aligned_timepoint(t.alignment);
 
-        sleep(Duration::from_secs(1));
+                Ok(())
+            })?;
 
-        let now = Instant::now();
-        let regs = &vec![
-            PV1_VOLTAGE,
-            PV1_CURRENT,
-            PV2_VOLTAGE,
-            PV2_CURRENT,
-            PV3_VOLTAGE,
-            PV3_CURRENT,
-            PV4_VOLTAGE,
-            PV4_CURRENT,
-        ];
-        let active_pow = inverter.read_batch(regs)?.into_iter().for_each(|val| {
-            println!("{:?}: {:?}", val.reg.name, val.val);
-        });
-        let time = now.elapsed();
-        println!("batch {:?} time {:?}", active_pow, time);
-
-        sleep(Duration::from_secs(1))
+        let next_req = tables.iter().map(|t| t.next_read).min();
+        if let None = next_req {
+            break;
+        }
+        let sleep_time = (next_req.unwrap() - Local::now()).to_std();
+        if let Ok(dur) = sleep_time {
+            sleep(dur);
+        }
     }
 
     inverter.disconnect()?;
 
     Ok(())
 }
+
 fn connect_database(
     retries: u8,
     delay: Duration,
@@ -469,4 +329,193 @@ fn connect_database(
             }
         }
     }
+}
+
+fn connect_inverter() -> Result<Inverter, Box<dyn std::error::Error>> {
+    let ip = env::var("DB_ADDR")?;
+    let port = env::var("DB_PORT")?.parse::<u16>()?;
+    let mb_id = env::var("DB_MBID")?.parse::<u8>()?;
+
+    println!("\tIP: {}", ip);
+    println!("\tport: {}", port);
+    println!("\tmodbus id: {}", mb_id);
+
+    Ok(huawei_solar::Inverter::connect_tcp(
+        Some(&ip),
+        Some(port),
+        Some(mb_id),
+        Some(Duration::from_secs(5)),
+        Some(Duration::from_secs(5)),
+        Some(Duration::from_secs(5)),
+    )?)
+}
+
+struct Status {
+    strings: u16,
+}
+
+fn get_status(inverter: &mut Inverter) -> Result<Status, Box<dyn std::error::Error>> {
+    let info_regs = vec![
+        &MODEL,
+        &SN,
+        &PN,
+        &MODEL_ID,
+        &NUMBER_OF_PV_STRINGS,
+        &NUMBER_OF_MPP_TRACKERS,
+        &RATED_POWER,
+        &MAXIMUM_ACTIVE_POWER,
+        &MAXIMUM_APPARENT_POWER,
+        &MAXIMUM_REACTIVE_POWER_TO_GRID,
+        &MAXIMUM_APPARENT_POWER_FROM_GRID,
+    ];
+    let info_vals = inverter.read_batch_retry(&info_regs, 10, Duration::from_millis(200))?;
+    let strings = info_vals[4].to_u16()?;
+
+    let info_regs = vec![
+        &EFFICIENCY,
+        &INTERNAL_TEMPERATURE,
+        &DEVICE_STATUS,
+        &STARTUP_TIME,
+        &SHUTDOWN_TIME,
+    ];
+    let info_vals2 = inverter.read_batch_retry(&info_regs, 10, Duration::from_millis(200))?;
+
+    println!("\nInverter");
+    println!("\tModel: {} (ID: {})", &info_vals[0], &info_vals[3]);
+    println!("\tSN/PN: {}/{}", &info_vals[1], &info_vals[2]);
+    if let Value::U16(val) = info_vals2[2].val {
+        println!(
+            "\tStatus: {}",
+            device_status_to_string(val).unwrap_or("invalid")
+        );
+    }
+    if let Value::U32(val) = info_vals2[3].val {
+        println!(
+            "\tStartup: {:?}",
+            Local::timestamp_opt(&Local, val.into(), 0)
+                .unwrap()
+                .to_string()
+        );
+    }
+    if let Value::U32(val) = info_vals2[4].val {
+        if val != u32::MAX {
+            println!(
+                "\tShutdown: {:?}",
+                Local::timestamp_opt(&Local, val.into(), 0)
+                    .unwrap()
+                    .to_string()
+            );
+        }
+    }
+    println!("\tStrings: {}", &info_vals[4],);
+    println!("\tTrackers: {}", &info_vals[5],);
+    println!("\tMaximum:");
+    println!("\t\tactive power  : {}", &info_vals[7]);
+    println!("\t\tapparent power: {}", &info_vals[8]);
+    println!("\t\treactive power -> grid: {}", &info_vals[9]);
+    println!("\t\tapparent power <- grid: {}", &info_vals[10]);
+    println!();
+
+    let storage_info_regs = vec![
+        &storage::RUNNING_STATUS,
+        &storage::CHARGE_DISCHARGE_POWER,
+        &storage::CHARGE_CAPACITY_DAY,
+        &storage::DISCHARGE_CAPACITY_DAY,
+    ];
+    let storage_info_vals =
+        inverter.read_batch_retry(&storage_info_regs, 10, Duration::from_millis(200))?;
+
+    println!("\tStorage:");
+    if let Value::U16(val) = storage_info_vals[0].val {
+        println!(
+            "\t\tStatus: {}",
+            storage::running_status_to_string(val).unwrap_or("invalid")
+        );
+    }
+    println!("\t\tcharge/discharge: {}", &storage_info_vals[1]);
+    println!("\t\tcharge capacity    (today): {}", &storage_info_vals[2]);
+    println!("\t\tdischarge capacity (today): {}", &storage_info_vals[3]);
+
+    Ok(Status { strings })
+}
+
+fn create_tables(status: &Status) -> Vec<DbTable<'static>> {
+    let mut tables = vec![
+        DbTable {
+            name: String::from("general"),
+            alignment: Duration::from_secs(30),
+            values: [
+                INPUT_POWER,
+                LINE_VOLTAGE_A_B,
+                LINE_VOLTAGE_B_C,
+                LINE_VOLTAGE_C_A,
+                PHASE_CURRENT_A,
+                PHASE_CURRENT_B,
+                PHASE_CURRENT_C,
+                PHASE_VOLTAGE_A,
+                PHASE_VOLTAGE_B,
+                PHASE_VOLTAGE_C,
+                ACTIVE_POWER,
+                REACTIVE_POWER,
+                RATED_POWER,
+                ACC_ENERGY_YIELD,
+                ENERGY_YIELD_DAY,
+            ]
+            .into_iter()
+            .map(|reg| (reg.name, reg))
+            .collect(),
+            next_read: Local::now(),
+        },
+        DbTable {
+            name: String::from("monitoring"),
+            alignment: Duration::from_secs(30),
+            values: [EFFICIENCY, INTERNAL_TEMPERATURE]
+                .into_iter()
+                .map(|reg| (reg.name, reg))
+                .collect(),
+            next_read: Local::now(),
+        },
+        DbTable {
+            name: String::from("storage"),
+            alignment: Duration::from_secs(30),
+            values: [
+                storage::CHARGE_DISCHARGE_POWER,
+                storage::CHARGE_CAPACITY_DAY,
+                storage::DISCHARGE_CAPACITY_DAY,
+            ]
+            .into_iter()
+            .map(|reg| (reg.name, reg))
+            .collect(),
+            next_read: Local::now(),
+        },
+    ];
+
+    let plant_regs = [
+        (PV1_VOLTAGE, PV1_CURRENT),
+        (PV2_VOLTAGE, PV2_CURRENT),
+        (PV3_VOLTAGE, PV3_CURRENT),
+        (PV4_VOLTAGE, PV4_CURRENT),
+    ];
+
+    plant_regs
+        .into_iter()
+        .zip(0..status.strings)
+        .for_each(|((volt, curr), i)| {
+            tables.push(DbTable {
+                alignment: Duration::from_secs(5),
+                name: format!("plant_{}", i + 1),
+                values: vec![("voltage", volt), ("current", curr)],
+                next_read: Local::now(),
+            })
+        });
+
+    tables
+}
+
+fn next_aligned_timepoint(alignment: Duration) -> DateTime<Local> {
+    let now = Local::now();
+    let nanos = now.timestamp_nanos_opt().unwrap();
+    let align = alignment.as_nanos() as i64;
+
+    DateTime::from_timestamp_nanos(nanos % align + align).with_timezone(&Local)
 }
