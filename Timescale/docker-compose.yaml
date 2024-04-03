@@ -13,7 +13,7 @@ services:
       - POSTGRES_PASSWORD=adminpass
       - POSTGRES_DB=huawei-solar
       - TIMESCALEDB_TELEMETRY=off
-    # restart:
+    restart: on-failure
   superset:
     init: true
     build:
@@ -44,6 +44,7 @@ services:
       - INV_ADDR=192.168.200.1
       - INV_PORT=6607
       - INV_MBID=0
+    restart: on-failure
 
   # cubejs:
   #   image: cubejs/cube:v0.31
